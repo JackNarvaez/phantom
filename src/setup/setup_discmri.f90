@@ -15,9 +15,17 @@ module setup
 !
 ! :Runtime parameters: None
 !
-! :Dependencies: io, part, options, physcon, setdisc, units
+! :Dependencies: centreofmass, io, part, options, physcon, setdisc, units
 !                timestep
 !
+
+ use setdisc,   only:set_disc
+ use units,     only:set_units
+ use part,      only:xyzmh_ptmass,vxyz_ptmass,ihacc,ihsoft,nptmass !,Bxyz,mhd
+ use physcon,   only:solarm,au,pi
+ use io,        only:master
+ use options,   only:alpha, ieos
+ use timestep,  only:tmax,dtmax
  implicit none
  public :: setpart
 
@@ -31,13 +39,6 @@ contains
 !
 !----------------------------------------------------------------
 subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,time,fileprefix)
- use setdisc,   only:set_disc
- use units,     only:set_units
- use part,      only:xyzmh_ptmass,vxyz_ptmass,ihacc,ihsoft,nptmass !,Bxyz,mhd
- use physcon,   only:solarm,au,pi
- use io,        only:master
- use options,   only:alpha, ieos
- use timestep,  only:tmax,dtmax
 
  integer,           intent(in)    :: id
  integer,           intent(out)   :: npart
@@ -64,6 +65,9 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
 ! set code units
  call set_units(dist=au,mass=solarm,G=1.d0)
 
+!--set time
+ time  = 0.
+
 !--central object(s)
  icentral   = 1
 
@@ -86,19 +90,25 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  Q_min      = 1.0
  ismoothgas = .true.
 
- !--simulation time
- deltat  = 0.1
+!--simulation time
+ deltat  = 0.01
  norbits = 1
 
+!--setup equation of state
+ ieos   = 3
  gamma = 1.0
+ 
+!--resolution
  npart = 1e5
  npartoftype(1) = npart
  hfact = 1.2
- time  = 0.
+
  accr1 = R_in
+ alpha = alphaSS
 
  print*,' Mstar is ', Mstar, ' in code units'
  print*,' Mdisc is ', Mdisc, ' in code units'
+ print*,' RdAcc is ', accr1, ' in code units'
 
 !--setup disc(s)
  call set_disc(id,master        = master,           &
@@ -121,10 +131,11 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
                alpha            = alpha,            &
                prefix           = fileprefix)
 
+!--reset centre of mass to the origin
+ call set_centreofmass(npart,xyzh,vxyzu)
+
 !--single star
- print "(/,a)",' Central object represented by a sink at the system origin'
- print "(a,g10.3)",'   Object mass:      ', Mstar
- print "(a,g10.3)",'   Accretion Radius: ', accr1
+!--Central object represented by a sink at the system origin
  nptmass                      = 1
  xyzmh_ptmass(:,:)            = 0.
  xyzmh_ptmass(1:3,nptmass)    = 0.
@@ -133,16 +144,26 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  xyzmh_ptmass(ihsoft,nptmass) = 0.
  vxyz_ptmass                  = 0.
 
-!--setup equation of state
- ieos   = 3
-
 !--outer disc orbital period
  period = sqrt(4.*pi**2*R_out**3/Mstar)
  dtmax  = deltat*period
  tmax   = norbits*period
 
-
-
 end subroutine setpart
+
+!--------------------------------------------------------------------------
+!
+!  Reset centre of mass to origin
+!
+!--------------------------------------------------------------------------
+subroutine set_centreofmass(npart,xyzh,vxyzu)
+    use centreofmass, only:reset_centreofmass
+    integer, intent(in)    :: npart
+    real,    intent(inout) :: xyzh(:,:)
+    real,    intent(inout) :: vxyzu(:,:)
+   
+    call reset_centreofmass(npart,xyzh,vxyzu,nptmass,xyzmh_ptmass,vxyz_ptmass)
+   
+   end subroutine set_centreofmass
 
 end module setup
