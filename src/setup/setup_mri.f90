@@ -155,7 +155,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
 !--set magnetic field using plasma beta 
  if (mhd) then
    ihavesetupB=.true.
-   beta=100.
+   beta=1000.
 
    ! toroidal field
    ! set up a magnetic field just in Bphi
