@@ -20,10 +20,11 @@ module setup
 !
  
  use io,                only:master
+ use eos,               only:qfacdisc
  use options,           only:alpha, ieos
  use part,              only:xyzmh_ptmass,vxyz_ptmass,ihacc,ihsoft,nptmass,Bxyz,mhd,rhoh,igas
  use physcon,           only:solarm,au,pi 
- use setdisc,           only:set_disc,scaled_sigma,get_disc_mass,maxbins
+ use setdisc,           only:set_disc
  use setup_params,      only:ihavesetupB
  use timestep,          only:tmax,dtmax
  use units,             only:set_units
@@ -57,7 +58,6 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  real :: alphaSS
  real :: posangl,incl
  real :: Mdisc,Mstar
- real :: sig_ref,Q_min
  real :: period,deltat
  real :: accr1
  real :: pmassi
@@ -82,8 +82,8 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
 
 !--gas disc
  R_in       = 1.
- R_out      = 150.
- R_ref      = 10.
+ R_out      = 50.
+ R_ref      = 1.
  pindex     = 1.
  qindex     = 0.25
  alphaSS    = 0.005
@@ -92,8 +92,6 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  H_R        = 0.05
  Mstar      = 1.0
  Mdisc      = 0.05
- sig_ref    = 1.e-02
- Q_min      = 1.0
  ismoothgas = .true.
 
 !--simulation time
@@ -101,8 +99,9 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  norbits = 1
 
 !--setup equation of state
- ieos   = 3
- gamma  = 1.0
+ ieos     = 3
+ gamma    = 1.0
+ qfacdisc = qindex
 
 !--resolution
  npart = 1e5
@@ -112,9 +111,9 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  accr1 = R_in
  alpha = alphaSS
 
- print*,' Mstar is ', Mstar, ' in code units'
- print*,' Mdisc is ', Mdisc, ' in code units'
- print*,' RdAcc is ', accr1, ' in code units'
+ print '(A,F12.4,A)',' Mstar is ', Mstar, ' in code units'
+ print '(A,F12.4,A)',' Mdisc is ', Mdisc, ' in code units'
+ print '(A,F12.4,A)',' RdAcc is ', accr1, ' in code units'
 
 !--setup disc(s)
  call set_disc(id,master        = master,               &
@@ -143,7 +142,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  xyzmh_ptmass(1:3,nptmass)    = 0.
  xyzmh_ptmass(4,nptmass)      = Mstar
  xyzmh_ptmass(ihacc,nptmass)  = accr1
- xyzmh_ptmass(ihsoft,nptmass) = 0.
+ xyzmh_ptmass(ihsoft,nptmass) = 0.01*accr1
  vxyz_ptmass                  = 0.
 
 !--outer disc orbital period
@@ -154,34 +153,33 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
 !--add magnetic field
 !--set magnetic field using plasma beta 
  if (mhd) then
-   ihavesetupB=.true.
-   beta=1000.
+  ihavesetupB=.true.
+  beta=1000.
 
-   ! toroidal field
-   ! set up a magnetic field just in Bphi
-   do i = 1,npart
-    r2 = dot_product(xyzh(1:2,i),xyzh(1:2,i))
-    r = sqrt(r2)
-    phi = atan2(xyzh(2,i),xyzh(1,i))
-    omega = r**(-1.5)
-    cs = H_R*r*omega
-    pmassi = massoftype(igas)
-    pressure = cs**2*rhoh(xyzh(4,i),pmassi)
-    Bzero = sqrt(2.*pressure/beta)
-    Bxyz(1,i) = -Bzero*sin(phi)
-    Bxyz(2,i) = Bzero*cos(phi)
+  ! toroidal field
+  ! set up a magnetic field just in Bphi
+  do i = 1,npart
+   r2 = dot_product(xyzh(1:2,i),xyzh(1:2,i))
+   r = sqrt(r2)
+   phi = atan2(xyzh(2,i),xyzh(1,i))
+   omega = r**(-1.5)
+   cs = H_R*r*omega
+   pmassi = massoftype(igas)
+   pressure = cs**2*rhoh(xyzh(4,i),pmassi)
+   Bzero = sqrt(2.*pressure/beta)
+   Bxyz(1,i) = -Bzero*sin(phi)
+   Bxyz(2,i) = Bzero*cos(phi)
 
-    ! calculate correction in v_phi due to B
-    vphiold = (-xyzh(2,i)*vxyzu(1,i) + xyzh(1,i)*vxyzu(2,i))/r
-    vphiold2 = vphiold**2
-    vphicorr2 = -2.*cs**2
-    vadd = sqrt(vphiold2 + vphicorr2)
-    vxyzu(1,i) = vxyzu(1,i) + sin(phi)*(vphiold - vadd)
-    vxyzu(2,i) = vxyzu(2,i) - cos(phi)*(vphiold - vadd)
+   ! calculate correction in v_phi due to B
+   vphiold = (-xyzh(2,i)*vxyzu(1,i) + xyzh(1,i)*vxyzu(2,i))/r
+   vphiold2 = vphiold**2
+   vphicorr2 = -2.*cs**2
+   vadd = sqrt(vphiold2 + vphicorr2)
+   vxyzu(1,i) = vxyzu(1,i) + sin(phi)*(vphiold - vadd)
+   vxyzu(2,i) = vxyzu(2,i) - cos(phi)*(vphiold - vadd)
   enddo
+  Bxyz(3,:) = 0.0
  endif
-
- Bxyz(3,:) = 0.0
 
 !--reset centre of mass to the origin
  call set_centreofmass(npart,xyzh,vxyzu)
