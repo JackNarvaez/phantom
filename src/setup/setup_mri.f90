@@ -62,8 +62,8 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  real :: accr1
  real :: pmassi
  real    :: beta,Bzero,phi
- real    :: r2,r,omega,cs,pressure
- real    :: vphiold2,vphiold,vadd,vphicorr2
+ real    :: r2,r,vkep,cs2,pressure
+ real    :: vnew
  integer :: norbits
  integer :: icentral
  integer :: nsinks
@@ -104,7 +104,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  qfacdisc = qindex
 
 !--resolution
- npart = 1e5
+ npart = 1e6
  npartoftype(igas) = npart
  hfact = 1.2
 
@@ -153,36 +153,36 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
 !--add magnetic field
 !--set magnetic field using plasma beta 
  if (mhd) then
-  ihavesetupB=.true.
-  beta=1000.
+  ihavesetupB =.true.
+  beta =10.
 
   ! toroidal field
   ! set up a magnetic field just in Bphi
   do i = 1,npart
-   r2 = dot_product(xyzh(1:2,i),xyzh(1:2,i))
+   r2 = xyzh(1,i)**2 + xyzh(2,i)**2 + xyzh(3,i)**2
    r = sqrt(r2)
    phi = atan2(xyzh(2,i),xyzh(1,i))
-   omega = r**(-1.5)
-   cs = H_R*r*omega
+   vkep = Mstar/r
+   cs2 = polyk*r2**(-qindex)
    pmassi = massoftype(igas)
-   pressure = cs**2*rhoh(xyzh(4,i),pmassi)
+   pressure = cs2*rhoh(xyzh(4,i),pmassi)
    Bzero = sqrt(2.*pressure/beta)
    Bxyz(1,i) = -Bzero*sin(phi)
    Bxyz(2,i) = Bzero*cos(phi)
 
    ! calculate correction in v_phi due to B
-   vphiold = (-xyzh(2,i)*vxyzu(1,i) + xyzh(1,i)*vxyzu(2,i))/r
-   vphiold2 = vphiold**2
-   vphicorr2 = -2.*cs**2
-   vadd = sqrt(vphiold2 + vphicorr2)
-   vxyzu(1,i) = vxyzu(1,i) + sin(phi)*(vphiold - vadd)
-   vxyzu(2,i) = vxyzu(2,i) - cos(phi)*(vphiold - vadd)
+   vnew = vkep-cs2*(1.5+pindex+qindex)*(1.+1./beta)
+   vxyzu(1,i) = -sqrt(vnew)*sin(phi)
+   vxyzu(2,i) =  sqrt(vnew)*cos(phi)
+   vxyzu(3,i) = 0.0d0
   enddo
-  Bxyz(3,:) = 0.0
+  Bxyz(3,:) = 0.0d0
  endif
 
 !--reset centre of mass to the origin
  call set_centreofmass(npart,xyzh,vxyzu)
+
+! call set_centreofmass(npart,xyzh,vxyzu)
 
  print*, ""
  print*,'|----------- END SETUP FILE ---------|'
