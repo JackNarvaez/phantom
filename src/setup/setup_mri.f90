@@ -62,7 +62,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  real :: accr1
  real :: pmassi
  real    :: beta,Bzero,phi
- real    :: r2,r,vkep,cs2,pressure
+ real    :: R2,R,vkep2,cs2,pressure
  real    :: vnew
  integer :: norbits
  integer :: icentral
@@ -96,7 +96,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
 
 !--simulation time
  deltat  = 0.01
- norbits = 1
+ norbits = 50
 
 !--setup equation of state
  ieos     = 3
@@ -154,24 +154,24 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
 !--set magnetic field using plasma beta 
  if (mhd) then
   ihavesetupB =.true.
-  beta =10.
+  beta =100.
 
   ! toroidal field
   ! set up a magnetic field just in Bphi
   do i = 1,npart
-   r2 = xyzh(1,i)**2 + xyzh(2,i)**2 + xyzh(3,i)**2
-   r = sqrt(r2)
-   phi = atan2(xyzh(2,i),xyzh(1,i))
-   vkep = Mstar/r
-   cs2 = polyk*r2**(-qindex)
-   pmassi = massoftype(igas)
-   pressure = cs2*rhoh(xyzh(4,i),pmassi)
-   Bzero = sqrt(2.*pressure/beta)
+   R2        = xyzh(1,i)**2 + xyzh(2,i)**2
+   R         = sqrt(R2)
+   phi       = atan2(xyzh(2,i),xyzh(1,i))
+   vkep2     = Mstar/R
+   cs2       = polyk*R2**(-qindex)
+   pmassi    = massoftype(igas)
+   pressure  = cs2*rhoh(xyzh(4,i),pmassi)
+   Bzero     = sqrt(2.*pressure/beta)
    Bxyz(1,i) = -Bzero*sin(phi)
    Bxyz(2,i) = Bzero*cos(phi)
 
    ! calculate correction in v_phi due to B
-   vnew = vkep-cs2*(1.5+pindex+qindex)*(1.+1./beta)
+   vnew = vkep2-cs2*(1.5+pindex+qindex)*(1.+1./beta)
    vxyzu(1,i) = -sqrt(vnew)*sin(phi)
    vxyzu(2,i) =  sqrt(vnew)*cos(phi)
    vxyzu(3,i) = 0.0d0
