@@ -82,7 +82,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
 
 !--gas disc
  R_in       = 1.
- R_out      = 50.
+ R_out      = 10.
  R_ref      = 1.
  pindex     = 1.
  qindex     = 0.25
@@ -96,7 +96,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
 
 !--simulation time
  deltat  = 0.01
- norbits = 50
+ norbits = 10
 
 !--setup equation of state
  ieos     = 3
@@ -154,7 +154,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
 !--set magnetic field using plasma beta 
  if (mhd) then
   ihavesetupB =.true.
-  beta =100.
+  beta =1000.
 
   ! toroidal field
   ! set up a magnetic field just in Bphi
