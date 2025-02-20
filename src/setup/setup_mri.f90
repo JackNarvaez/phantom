@@ -21,7 +21,7 @@ module setup
  
  use io,                only:master
  use eos,               only:qfacdisc
- use options,           only:alpha, ieos
+ use options,           only:alpha,ieos,nfulldump,overcleanfac
  use part,              only:xyzmh_ptmass,vxyz_ptmass,ihacc,ihsoft,nptmass,Bxyz,mhd,rhoh,igas
  use physcon,           only:solarm,au,pi 
  use setdisc,           only:set_disc
@@ -95,8 +95,9 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  ismoothgas = .true.
 
 !--simulation time
- deltat  = 0.01
- norbits = 10
+ deltat     = 0.01
+ norbits    = 10
+ nfulldump  = 1
 
 !--setup equation of state
  ieos     = 3
@@ -153,8 +154,9 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
 !--add magnetic field
 !--set magnetic field using plasma beta 
  if (mhd) then
-  ihavesetupB =.true.
-  beta =1000.
+  ihavesetupB   = .true.
+  overcleanfac  = 1.0
+  beta = 1000.
 
   ! toroidal field
   ! set up a magnetic field just in Bphi
