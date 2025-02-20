@@ -16,6 +16,15 @@ ifeq ($(MAP),yes)
 endif
 endif
 
+ifeq ($(SYSTEM), narval)
+#   Narval cluster, AMD EPYC 7532 https://docs.alliancecan.ca/wiki/Narval/en
+    include Makefile_defaults_ifort
+    FFLAGS+= -march=core-avx2
+    QSYS = slurm
+    NOMP=64
+    WALLTIME='168:00:00'
+endif
+
 ifeq ($(SYSTEM), daint)
 #   piz-daint supercomputer facility https://www.cscs.ch/computers/piz-daint
     include Makefile_defaults_ifort
