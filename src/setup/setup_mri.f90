@@ -19,15 +19,17 @@ module setup
 !                timestep
 !
  
+ use dim,               only:maxalpha,maxp,nalpha
  use io,                only:master
  use eos,               only:qfacdisc
- use options,           only:alpha,ieos,nfulldump,overcleanfac
+ use options,           only:alpha,alphamax,ieos,nfulldump,overcleanfac
  use part,              only:xyzmh_ptmass,vxyz_ptmass,ihacc,ihsoft,nptmass,Bxyz,mhd,rhoh,igas
  use physcon,           only:solarm,au,pi 
  use setdisc,           only:set_disc
  use setup_params,      only:ihavesetupB
  use timestep,          only:tmax,dtmax
  use units,             only:set_units
+ use viscosity,         only:irealvisc,shearparam,bulkvisc
 
  implicit none
 
@@ -55,7 +57,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  character(len=20), intent(in)    :: fileprefix
  real :: R_in,R_out,R_ref
  real :: pindex,qindex,H_R
- real :: alphaSS
+ real :: alphaSS, alphaMX
  real :: posangl,incl
  real :: Mdisc,Mstar
  real :: period,deltat
@@ -87,6 +89,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  pindex     = 1.
  qindex     = 0.25
  alphaSS    = 0.005
+ alphaMX    = 0.5
  posangl    = 0.
  incl       = 0.
  H_R        = 0.05
@@ -95,7 +98,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  ismoothgas = .true.
 
 !--simulation time
- deltat     = 0.01
+ deltat     = 0.1
  norbits    = 10
  nfulldump  = 1
 
@@ -109,12 +112,26 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  npartoftype(igas) = npart
  hfact = 1.2
 
+!--accretion radius
  accr1 = R_in
- alpha = alphaSS
 
- print '(A,F12.4,A)',' Mstar is ', Mstar, ' in code units'
- print '(A,F12.4,A)',' Mdisc is ', Mdisc, ' in code units'
- print '(A,F12.4,A)',' RdAcc is ', accr1, ' in code units'
+!--viscosity
+ ! Disc viscosity LP10. Switches are turned off.
+ if (maxalpha==0) then
+  alpha = alphaSS
+ elseif(maxalpha==maxp) then
+  alphamax = alphaMX
+ ! Shock artificial viscosity with Cullen & Dehnen switches
+  if (nalpha>=2) then
+   irealvisc = 0
+ ! Disc viscosity NS with Morris&Monaghan switches
+  else
+   irealvisc = 2
+   shearparam = alphaSS
+   bulkvisc = 0
+   alpha = 0
+  endif
+ endif
 
 !--setup disc(s)
  call set_disc(id,master        = master,               &
@@ -184,7 +201,19 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
 !--reset centre of mass to the origin
  call set_centreofmass(npart,xyzh,vxyzu)
 
-! call set_centreofmass(npart,xyzh,vxyzu)
+ print*, ""
+ print*,'|------------- PARAMETERS -----------|'
+ print*, ""
+
+ print '(A,F12.4)',' Mstar      = ', Mstar
+ print '(A,F12.4)',' Mdisc      = ', Mdisc
+ print '(A,F12.4)',' RdAcc      = ', accr1
+ print '(A,F12.4)',' alpha      = ', alpha
+ print '(A,I12)'  ,' irealvisc  = ', irealvisc
+ print '(A,F12.4)',' shearparam = ', shearparam
+ print '(A,F12.4)',' bulkvisc   = ', bulkvisc
+ print '(A,I12)'  ,' maxalpha   = ', maxalpha
+ print '(A,I12)'  ,' nalpha     = ', nalpha
 
  print*, ""
  print*,'|----------- END SETUP FILE ---------|'
