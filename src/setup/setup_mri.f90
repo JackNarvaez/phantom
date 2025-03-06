@@ -56,21 +56,21 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  real,              intent(inout) :: time
  character(len=20), intent(in)    :: fileprefix
  real :: R_in,R_out,R_ref
- real :: pindex,qindex,H_R
- real :: alphaSS, alphaMX
+ real :: pindex,qindex,q_z,H_R
+ real :: alphaSS,alphaMX
  real :: posangl,incl
  real :: Mdisc,Mstar
  real :: period,deltat
  real :: accr1
  real :: pmassi
  real    :: beta,Bzero,phi
- real    :: R2,R,vkep2,cs2,pressure
- real    :: vnew
+ real    :: R2,R,z2,vkep2,cs2,pressure
+ real    :: vnew2
  integer :: norbits
  integer :: icentral
  integer :: nsinks
  integer :: i
- logical :: ismoothgas
+ logical :: ismoothgas,shearz
 
 ! set code units
  call set_units(dist=au,mass=solarm,G=1.d0)
@@ -96,10 +96,11 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  Mstar      = 1.0
  Mdisc      = 0.05
  ismoothgas = .true.
+ shearz     = .true.
 
 !--simulation time
  deltat     = 0.1
- norbits    = 10
+ norbits    = 100
  nfulldump  = 1
 
 !--setup equation of state
@@ -168,17 +169,25 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  dtmax  = deltat*period
  tmax   = norbits*period
 
+!--add vertical shear
+ if (shearz) then
+  q_z = qindex
+ else
+  q_z = 0.0
+ endif
+
 !--add magnetic field
 !--set magnetic field using plasma beta 
  if (mhd) then
   ihavesetupB   = .true.
-  overcleanfac  = 1.0
+  overcleanfac  = 2.0
   beta = 1000.
 
   ! toroidal field
   ! set up a magnetic field just in Bphi
   do i = 1,npart
    R2        = xyzh(1,i)**2 + xyzh(2,i)**2
+   z2        = xyzh(3,i)**2
    R         = sqrt(R2)
    phi       = atan2(xyzh(2,i),xyzh(1,i))
    vkep2     = Mstar/R
@@ -190,12 +199,28 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
    Bxyz(2,i) = Bzero*cos(phi)
 
    ! calculate correction in v_phi due to B
-   vnew = vkep2-cs2*(1.5+pindex+qindex)*(1.+1./beta)
-   vxyzu(1,i) = -sqrt(vnew)*sin(phi)
-   vxyzu(2,i) =  sqrt(vnew)*cos(phi)
+   vnew2      = vkep2-(cs2*(1.5+pindex+qindex)+q_z*vkep2*z2/R2)*(1.+1./beta);
+   vxyzu(1,i) = -sqrt(vnew2)*sin(phi)
+   vxyzu(2,i) =  sqrt(vnew2)*cos(phi)
    vxyzu(3,i) = 0.0d0
   enddo
   Bxyz(3,:) = 0.0d0
+!--if vertical shear is on, then add dependency on z for ang.vel
+ elseif (shearz) then
+  do i=1,npart
+   R2        = xyzh(1,i)**2 + xyzh(2,i)**2
+   z2        = xyzh(3,i)**2
+   R         = sqrt(R2)
+   phi       = atan2(xyzh(2,i),xyzh(1,i))
+   vkep2     = Mstar/R
+   cs2       = polyk*R2**(-qindex)
+
+   ! calculate correction in v_phi due to B
+   vnew2      = vkep2-(cs2*(1.5+pindex+qindex)+q_z*vkep2*z2/R2);
+   vxyzu(1,i) = -sqrt(vnew2)*sin(phi)
+   vxyzu(2,i) =  sqrt(vnew2)*cos(phi)
+   vxyzu(3,i) = 0.0d0
+  enddo
  endif
 
 !--reset centre of mass to the origin
@@ -214,6 +239,8 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  print '(A,F12.4)',' bulkvisc   = ', bulkvisc
  print '(A,I12)'  ,' maxalpha   = ', maxalpha
  print '(A,I12)'  ,' nalpha     = ', nalpha
+ print '(A,L5)'   ,' mhd        = ', mhd
+ print '(A,L5)'   ,' zth-shear  = ', shearz
 
  print*, ""
  print*,'|----------- END SETUP FILE ---------|'
@@ -221,19 +248,20 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
 
 end subroutine setpart
 
+
 !--------------------------------------------------------------------------
 !
 !  Reset centre of mass to origin
 !
 !--------------------------------------------------------------------------
 subroutine set_centreofmass(npart,xyzh,vxyzu)
-    use centreofmass, only:reset_centreofmass
-    integer, intent(in)    :: npart
-    real,    intent(inout) :: xyzh(:,:)
-    real,    intent(inout) :: vxyzu(:,:)
+ use centreofmass, only:reset_centreofmass
+ integer, intent(in)    :: npart
+ real,    intent(inout) :: xyzh(:,:)
+ real,    intent(inout) :: vxyzu(:,:)
    
-    call reset_centreofmass(npart,xyzh,vxyzu,nptmass,xyzmh_ptmass,vxyz_ptmass)
+ call reset_centreofmass(npart,xyzh,vxyzu,nptmass,xyzmh_ptmass,vxyz_ptmass)
    
-   end subroutine set_centreofmass
+end subroutine set_centreofmass
 
 end module setup
