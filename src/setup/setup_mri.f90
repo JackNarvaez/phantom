@@ -70,7 +70,9 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  integer :: icentral
  integer :: nsinks
  integer :: i
+ integer :: visc
  logical :: ismoothgas,shearz
+ logical :: nsvisc
 
 ! set code units
  call set_units(dist=au,mass=solarm,G=1.d0)
@@ -97,6 +99,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  Mdisc      = 0.05
  ismoothgas = .true.
  shearz     = .true.
+ nsvisc     = .true.  ! SS viscosity
 
 !--simulation time
  deltat     = 0.1
@@ -117,20 +120,35 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  accr1 = R_in
 
 !--viscosity
- ! Disc viscosity LP10. Switches are turned off.
+! Disc viscosity LP10. Switches are turned off.
  if (maxalpha==0) then
   alpha = alphaSS
- elseif(maxalpha==maxp) then
+  visc  = 3
+ elseif (maxalpha==maxp) then
   alphamax = alphaMX
- ! Shock artificial viscosity with Cullen & Dehnen switches
-  if (nalpha>=2) then
-   irealvisc = 0
- ! Disc viscosity NS with Morris&Monaghan switches
-  else
+  !alpha = 0.0
+! Add Shakura/Sunyaev disc viscosity via real Navier-Stokes viscosity  
+  if (nsvisc) then
    irealvisc = 2
    shearparam = alphaSS
    bulkvisc = 0
-   alpha = 0
+   visc = 4
+! No Disc viscosity
+  else
+   visc = 0
+   irealvisc = 0
+  endif
+  ! Artificial viscosity switches
+  if (nalpha >= 2) then
+  ! Cullen-Dehnen switch
+    if (visc == 0) then
+     visc = 1
+    endif
+  else
+  ! Morris-Monaghan switch
+    if (visc == 0) then
+     visc = 2
+    endif
   endif
  endif
 
@@ -237,8 +255,9 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  print '(A,I12)'  ,' irealvisc  = ', irealvisc
  print '(A,F12.4)',' shearparam = ', shearparam
  print '(A,F12.4)',' bulkvisc   = ', bulkvisc
+ print '(A,I12,A)',' visc       = ', visc        ,' (1: AVC; 2: AVM; 3: DVA; 4:DVN)'
  print '(A,I12)'  ,' maxalpha   = ', maxalpha
- print '(A,I12)'  ,' nalpha     = ', nalpha
+ print '(A,I12,A)',' nalpha     = ', nalpha      ,' (0: none; 1: Morris-Monaghan; 3: Cullen-Dehnen)'
  print '(A,L5)'   ,' mhd        = ', mhd
  print '(A,L5)'   ,' zth-shear  = ', shearz
 

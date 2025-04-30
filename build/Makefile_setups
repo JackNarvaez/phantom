@@ -177,8 +177,8 @@ endif
 
 ifeq ($(SETUP), mri)
 #   mri global disc simulation
-#    DISC_VISCOSITY=yes
-    MORRIS_MONAGHAN=yes
+#   DISC_VISCOSITY=yes
+#   MORRIS_MONAGHAN=yes
     SETUPFILE=setup_mri.f90
     ANALYSIS=analysis_disc.f90
     ISOTHERMAL=yes
