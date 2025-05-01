@@ -73,6 +73,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  integer :: visc
  logical :: ismoothgas,shearz
  logical :: nsvisc
+ character(len=16) :: geometry
 
 ! set code units
  call set_units(dist=au,mass=solarm,G=1.d0)
@@ -195,14 +196,14 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  endif
 
 !--add magnetic field
-!--set magnetic field using plasma beta 
+!--only 'toroidal' and 'vertical' geometries supported
+!--field set using constant plasma beta and isothermal pressure
  if (mhd) then
   ihavesetupB   = .true.
   overcleanfac  = 2.0
+  geometry = 'vertical'
   beta = 1000.
 
-  ! toroidal field
-  ! set up a magnetic field just in Bphi
   do i = 1,npart
    R2        = xyzh(1,i)**2 + xyzh(2,i)**2
    z2        = xyzh(3,i)**2
@@ -213,8 +214,21 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
    pmassi    = massoftype(igas)
    pressure  = cs2*rhoh(xyzh(4,i),pmassi)
    Bzero     = sqrt(2.*pressure/beta)
+  
+  ! toroidal magnetic field (Bphi)
+  if (geometry == 'toroidal') then
    Bxyz(1,i) = -Bzero*sin(phi)
    Bxyz(2,i) = Bzero*cos(phi)
+   Bxyz(3,i) = 0.0d0
+  ! vertical magnetic field (Bz)
+  elseif (geometry == 'vertical') then
+   Bxyz(1,i) = 0.0d0
+   Bxyz(2,i) = 0.0d0
+   Bxyz(3,i) = Bzero
+  else
+   print *, 'Error: Unknown magnetic field geometry: ', trim(geometry)
+   stop
+  endif
 
    ! calculate correction in v_phi due to B
    vnew2      = vkep2-(cs2*(1.5+pindex+qindex)+q_z*vkep2*z2/R2)*(1.+1./beta);
@@ -222,7 +236,6 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
    vxyzu(2,i) =  sqrt(vnew2)*cos(phi)
    vxyzu(3,i) = 0.0d0
   enddo
-  Bxyz(3,:) = 0.0d0
 !--if vertical shear is on, then add dependency on z for ang.vel
  elseif (shearz) then
   do i=1,npart
@@ -245,12 +258,17 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  call set_centreofmass(npart,xyzh,vxyzu)
 
  print*, ""
- print*,'|------------- PARAMETERS -----------|'
+ print*,'|------------ PARAMETERS ------------|'
  print*, ""
 
  print '(A,F12.4)',' Mstar      = ', Mstar
  print '(A,F12.4)',' Mdisc      = ', Mdisc
  print '(A,F12.4)',' RdAcc      = ', accr1
+ print*,' ---------------- MHD --------------- '
+ print '(A,L5)'   ,' mhd        = ', mhd
+ print '(A,A)'    ,' geometry   = ', trim(geometry)
+ print '(A,F12.4)',' beta_mag   = ', beta
+ print*,' ---------------- VISC --------------- '
  print '(A,F12.4)',' alpha      = ', alpha
  print '(A,I12)'  ,' irealvisc  = ', irealvisc
  print '(A,F12.4)',' shearparam = ', shearparam
@@ -258,11 +276,10 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  print '(A,I12,A)',' visc       = ', visc        ,' (1: AVC; 2: AVM; 3: DVA; 4:DVN)'
  print '(A,I12)'  ,' maxalpha   = ', maxalpha
  print '(A,I12,A)',' nalpha     = ', nalpha      ,' (0: none; 1: Morris-Monaghan; 3: Cullen-Dehnen)'
- print '(A,L5)'   ,' mhd        = ', mhd
  print '(A,L5)'   ,' zth-shear  = ', shearz
 
  print*, ""
- print*,'|----------- END SETUP FILE ---------|'
+ print*,'|---------- END SETUP FILE ----------|'
  print*, ""
 
 end subroutine setpart
