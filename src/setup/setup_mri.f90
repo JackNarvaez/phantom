@@ -92,7 +92,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  pindex     = 1.
  qindex     = 0.25
  alphaSS    = 0.005
- alphaMX    = 0.5
+ alphaMX    = 1.0
  posangl    = 0.
  incl       = 0.
  H_R        = 0.05
@@ -100,7 +100,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  Mdisc      = 0.05
  ismoothgas = .true.
  shearz     = .true.
- nsvisc     = .true.  ! SS viscosity
+ nsvisc     = .false.  ! SS viscosity
 
 !--simulation time
  deltat     = 0.1
@@ -200,9 +200,9 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
 !--field set using constant plasma beta and isothermal pressure
  if (mhd) then
   ihavesetupB   = .true.
-  overcleanfac  = 2.0
-  geometry = 'vertical'
-  beta = 1000.
+  overcleanfac  = 20.0
+  geometry = 'toroidal'
+  beta = 25.
 
   do i = 1,npart
    R2        = xyzh(1,i)**2 + xyzh(2,i)**2

@@ -183,6 +183,7 @@ ifeq ($(SETUP), mri)
     ANALYSIS=analysis_disc.f90
     ISOTHERMAL=yes
     MHD=yes
+    KERNEL=quintic
     KNOWN_SETUP=yes
     IND_TIMESTEPS=yes
 endif
