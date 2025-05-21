@@ -20,8 +20,9 @@ module setup
 !
  
  use dim,               only:maxalpha,maxp,nalpha
- use io,                only:master
  use eos,               only:qfacdisc
+ use io,                only:master
+ use kernel,            only:hfact_default
  use options,           only:alpha,alphamax,ieos,nfulldump,overcleanfac
  use part,              only:xyzmh_ptmass,vxyz_ptmass,ihacc,ihsoft,nptmass,Bxyz,mhd,rhoh,igas
  use physcon,           only:solarm,au,pi 
@@ -115,7 +116,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
 !--resolution
  npart = 1e6
  npartoftype(igas) = npart
- hfact = 1.2
+ hfact = hfact_default
 
 !--accretion radius
  accr1 = R_in
