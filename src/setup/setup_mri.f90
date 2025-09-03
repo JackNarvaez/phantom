@@ -114,7 +114,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  qfacdisc = qindex
 
 !--resolution
- npart = 1e6
+ npart = 1e5
  npartoftype(igas) = npart
  hfact = hfact_default
 
@@ -201,7 +201,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
 !--field set using constant plasma beta and isothermal pressure
  if (mhd) then
   ihavesetupB   = .true.
-  overcleanfac  = 20.0
+  overcleanfac  = 1.0
   geometry = 'toroidal'
   beta = 25.
 
