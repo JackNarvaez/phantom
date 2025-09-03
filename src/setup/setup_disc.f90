@@ -37,7 +37,7 @@ module setup
 !   - add_rotation   : *Rotational Velocity of the cloud (0=no rotation, 1=k*(GM/R**3)**0.5)*
 !   - add_sphere     : *add sphere around disc?*
 !   - add_turbulence : *Add turbulence to the sphere (0=no turbulence, 1=turbulence)*
-!   - alphaSS        : *desired alphaSS*
+!   - alphaSS        : *desired alphaSS (0 for minimal needed for shock capturing)*
 !   - alpha_z        : *height of transition in tanh vertical temperature profile*
 !   - atm_type       : *atmosphere type (1:r**(-3); 2:r**(-1./(gamma-1.)))*
 !   - beta_z         : *variation in transition height over radius*
@@ -132,7 +132,7 @@ module setup
  use setdisc,          only:scaled_sigma,get_disc_mass,maxbins
  use set_dust_options, only:set_dust_default_options,dust_method,dust_to_gas,&
                             ndusttypesinp,ndustlargeinp,ndustsmallinp,isetdust,&
-                            dustbinfrac,check_dust_method
+                            dustbinfrac,check_dust_method,set_dust_grain_distribution
  use units,            only:umass,udist,utime
  use dim,              only:do_radiation
  use radiation_utils,  only:set_radiation_and_gas_temperature_equal
@@ -319,7 +319,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  call surface_density_profile()
 
  !--setup grain size distribution
- call setup_dust_grain_distribution()
+ call set_dust_grain_distribution(ndusttypes,dustbinfrac,grainsize,graindens,udist,umass)
 
  !--compute disc mass and surface density normalization
  call calculate_disc_mass()
@@ -1093,44 +1093,6 @@ end subroutine setup_central_objects
 
 !--------------------------------------------------------------------------
 !
-! Set the grain size distribution
-!
-!--------------------------------------------------------------------------
-subroutine setup_dust_grain_distribution()
- use dust,             only:grainsizecgs,graindenscgs
- use set_dust,         only:set_dustbinfrac
- use set_dust_options, only:grainsizeinp,graindensinp,igrainsize,igraindens,&
-                            smincgs,smaxcgs,sindex
-
- if (use_dust) then
-    grainsize = 0.
-    graindens = 0.
-    if (ndusttypes > 1) then
-       select case(igrainsize)
-       case(0)
-          call set_dustbinfrac(smincgs,smaxcgs,sindex,dustbinfrac(1:ndusttypes),grainsize(1:ndusttypes))
-          grainsize(1:ndusttypes) = grainsize(1:ndusttypes)/udist
-       case(1)
-          grainsize(1:ndusttypes) = grainsizeinp(1:ndusttypes)/udist
-       end select
-       select case(igraindens)
-       case(0)
-          graindens(1:ndusttypes) = graindensinp(1)/umass*udist**3
-       case(1)
-          graindens(1:ndusttypes) = graindensinp(1:ndusttypes)/umass*udist**3
-       end select
-    else
-       grainsize(1) = grainsizeinp(1)/udist
-       graindens(1) = graindensinp(1)/umass*udist**3
-       grainsizecgs = grainsizeinp(1)
-       graindenscgs = graindensinp(1)
-    endif
- endif
-
-end subroutine setup_dust_grain_distribution
-
-!--------------------------------------------------------------------------
-!
 ! Calculate the required disc masses
 !
 !--------------------------------------------------------------------------
@@ -1278,7 +1240,7 @@ subroutine setup_discs(id,fileprefix,hfact,gamma,npart,polyk,&
  hfact = hfact_default
  incl    = incl*deg_to_rad
  posangl = posangl*deg_to_rad
- if (maxalpha==0) alpha = alphaSS
+ alpha = alphaSS
  npart = 0
  npartoftype(:) = 0
 
@@ -2273,7 +2235,7 @@ end subroutine set_tmax_dtmax
 !--------------------------------------------------------------------------
 subroutine setup_interactive(id)
  use prompting,        only:prompt
- use set_dust_options, only:set_dust_interactively
+ use set_dust_options, only:set_dust_interactive
  use sethierarchical, only:set_hierarchical_default_options, get_hier_level_mass
  use sethierarchical, only:hs, hierarchy, print_chess_logo, generate_hierarchy_string!sink_num, hl_num, sink_labels, hl_labels
 
@@ -2536,7 +2498,7 @@ subroutine setup_interactive(id)
  R_c   = R_out
  disc_mfac = 1.
  if (ndiscs > 1) qindex = 0.
- if (maxalpha==0) alphaSS = 0.005
+ alphaSS = 0.005
  if (surface_force) then
     R_in  = 0.1
     R_out = 3.
@@ -2695,7 +2657,7 @@ subroutine setup_interactive(id)
     print "(a)",  '+++  DUST  +++'
     print "(a)",  '=============='
     !--dust distribution
-    call set_dust_interactively()
+    call set_dust_interactive()
     !--dust discs
     do i=1,maxdusttypes
        R_indust(:,i)    = R_in
@@ -3116,7 +3078,7 @@ subroutine write_setupfile(filename)
 
        endif
        if (.not.done_alpha) then
-          if (maxalpha==0) call write_inopt(alphaSS,'alphaSS','desired alphaSS',iunit)
+          call write_inopt(alphaSS,'alphaSS','desired alphaSS (0 for minimal needed for shock capturing)',iunit)
           done_alpha = .true.
        endif
        !--dust disc
@@ -3592,7 +3554,7 @@ subroutine read_setupfile(filename,ierr)
                 if (ierr /= 0) R_outdust(i,j) = R_out(i)
                 call read_inopt(pindex_dust(i,j),'pindex_'//trim(tmpstr),db,err=ierr,errcount=nerr)
                 if (ierr /= 0) pindex_dust(i,j) = pindex(i)
-                call read_inopt(use_sigmadust_file(i,j),'use_sigmadust_file'//trim(tmpstr),db,err=ierr,errcount=nerr)
+                !call read_inopt(use_sigmadust_file(i,j),'use_sigmadust_file'//trim(tmpstr),db,err=ierr,errcount=nerr)
                 call read_inopt(itaperdust(i,j),'itaper'//trim(tmpstr),db,err=ierr,errcount=nerr)
                 if (itaperdust(i,j)) call read_inopt(itapersetdust(i,j),'itapersetdust'//trim(tmpstr),db,errcount=nerr)
                 call read_inopt(ismoothdust(i,j),'ismooth'//trim(tmpstr),db,err=ierr,errcount=nerr)
@@ -3611,7 +3573,7 @@ subroutine read_setupfile(filename,ierr)
        endif
     endif
  enddo
- if (maxalpha==0 .and. any(iuse_disc)) call read_inopt(alphaSS,'alphaSS',db,min=0.,errcount=nerr)
+ if (any(iuse_disc)) call read_inopt(alphaSS,'alphaSS',db,min=0.,errcount=nerr)
 
  !--sphere around disc
  call read_inopt(add_sphere,'add_sphere',db,errcount=nerr)
