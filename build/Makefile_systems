@@ -16,7 +16,7 @@ ifeq ($(MAP),yes)
 endif
 endif
 
-ifeq ($(SYSTEM), narval)
+ifeq ($(SYSTEM), AllianceCan)
 #   Narval cluster, AMD EPYC 7532 https://docs.alliancecan.ca/wiki/Narval/en
     include Makefile_defaults_ifort
     FFLAGS+= -march=core-avx2
