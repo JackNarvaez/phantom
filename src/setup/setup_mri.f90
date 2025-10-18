@@ -23,12 +23,12 @@ module setup
  use eos,               only:qfacdisc
  use io,                only:master
  use kernel,            only:hfact_default
- use options,           only:alpha,alphamax,ieos,nfulldump,overcleanfac
+ use options,           only:alpha,alphamax,ieos,nfulldump
  use part,              only:xyzmh_ptmass,vxyz_ptmass,ihacc,ihsoft,nptmass,Bxyz,mhd,rhoh,igas
  use physcon,           only:solarm,au,pi 
  use setdisc,           only:set_disc
  use setup_params,      only:ihavesetupB
- use timestep,          only:tmax,dtmax
+ use timestep,          only:tmax,dtmax,overcleanfac
  use units,             only:set_units
  use viscosity,         only:irealvisc,shearparam,bulkvisc
 
@@ -105,7 +105,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
 
 !--simulation time
  deltat     = 0.1
- norbits    = 100
+ norbits    = 1
  nfulldump  = 1
 
 !--setup equation of state
