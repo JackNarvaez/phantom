@@ -18,9 +18,9 @@ endif
 
 ifeq ($(SYSTEM), AllianceCan)
 #   Digital Alliance Canada clusters
-    include Makefile_defaults_ifort
+    include Makefile_defaults_ifx
     FFLAGS+= -march=core-avx2
-    QSYS = slurm
+    QSYS=slurm
     NOMP=64
     WALLTIME='168:00:00'
 endif
