@@ -332,7 +332,7 @@ subroutine do_analysis(dumpfile,numfile,xyzh,vxyz,pmass,npart,time,iunit)
     Bz_net = Bz_net + Bz
 
     rho = rhoh(xyzh(4,i),pmass)
-    pressure = get_pressure(3,xyzh(:,i),rho,vxyzu(:,i))
+    pressure = get_pressure(3,xyzh(:,i),rho,vxyz(:,i))
     !pressure = cssqrd*rho  BUG?  This is the original version, which is pressure = spsound * rho
 
     Br = (Bx*xyzh(1,i)/ri) + (By*xyzh(2,i)/ri) + (Bz*xyzh(3,i)/ri)
@@ -367,7 +367,7 @@ subroutine do_analysis(dumpfile,numfile,xyzh,vxyz,pmass,npart,time,iunit)
  enddo
 
  if (do_alphamag) then
-    write(filename,"(a,i3.3)")"alpha_mag"
+    write(filename,"(a,i3.3)")"alpha_mag" 
     if (numfile==0) then
        open(unit=ialphamag,file=filename,status="replace")
        write(ialphamag,'("# various alpha_mag measures averaged over disc",es18.10)')
@@ -419,7 +419,7 @@ subroutine read_discparams(filename,R_in,R_out,H_R,p_index,q_index,M_star,iunit,
  if (ierr /= 0) return
  call read_inopt(R_out,'R_out',db,ierr)
  if (ierr /= 0) return
- call read_inopt(H_R,'H_R',db,ierr)
+ call read_inopt(H_R,'H/R_ref',db,ierr)
  if (ierr /= 0) return
  call read_inopt(p_index,'p_index',db,ierr)
  if (ierr /= 0) return
