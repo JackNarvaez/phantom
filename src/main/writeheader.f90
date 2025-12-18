@@ -76,7 +76,7 @@ subroutine write_header(icall,infile,evfile,logfile,dumpfile,ntot)
  use boundary,         only:print_boundaries
  use boundary_dyn,     only:dynamic_bdy,rho_thresh_bdy,width_bkg
  use options,          only:tolh,alpha,alphau,alphaB,ieos,alphamax,use_dustfrac,use_porosity,icooling
- use part,             only:hfact,massoftype,mhd,gravity,periodic,massoftype,npartoftypetot,&
+ use part,             only:hfact,massoftype,mhd,gdsph,gravity,periodic,massoftype,npartoftypetot,&
                             labeltype,maxtypes,igas
  use mpiutils,         only:reduceall_mpi
  use eos,              only:eosinfo
@@ -158,6 +158,7 @@ subroutine write_header(icall,infile,evfile,logfile,dumpfile,ntot)
            6x,' Number of neighbours = ',i4,/)
 
     if (mhd)              write(iprint,"(1x,a)") 'Magnetic fields are ON, evolving B/rho with cleaning'
+    if (gdsph)            write(iprint,"(1x,a)") 'GDSPH is ON, Geometric Density SPH'
     if (gravity)          write(iprint,"(1x,a)") 'Self-gravity is ON'
     if (h2chemistry)      write(iprint,"(1x,a)") 'H2 Chemistry is ON'
     if (use_dust) then

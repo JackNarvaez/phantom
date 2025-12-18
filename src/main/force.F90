@@ -917,7 +917,7 @@ subroutine compute_forces(i,iamgasi,iamdusti,xpartveci,hi,hi1,hi21,hi41,gradhi,g
                           ignoreself,rad,radprop,dens,metrics,apr_level,dt)
  use kernel,      only:grkern,cnormk,radkern2
  use part,        only:igas,idust,isink,iohm,ihall,iambi,maxphase,iactive,xyzmh_ptmass,&
-                       iamtype,iamdust,get_partinfo,mhd,maxvxyzu,maxdvdx,igasP,ics,iradP,itemp,&
+                       iamtype,iamdust,get_partinfo,mhd,gdsph,maxvxyzu,maxdvdx,igasP,ics,iradP,itemp,&
                        ihsoft
  use dim,         only:maxalpha,maxp,mhd_nonideal,gravity,gr,use_apr,isothermal,use_sinktree,disc_viscosity,track_lum
  use part,        only:rhoh,dvdx,aprmassoftype,shortsinktree
@@ -1487,7 +1487,11 @@ subroutine compute_forces(i,iamgasi,iamdusti,xpartveci,hi,hi1,hi21,hi41,gradhi,g
 
              mrhoj5   = 0.5*pmassj*rho1j
              autermj  = mrhoj5*alphau
+          if (gdsph) then
+             avBtermj = mrhoj5*alphaB*rho1i
+          else
              avBtermj = mrhoj5*alphaB*rho1j
+          endif
 
              if (gr) then
                 ! Relativistic version vij + csi
@@ -1624,13 +1628,22 @@ subroutine compute_forces(i,iamgasi,iamdusti,xpartveci,hi,hi1,hi21,hi41,gradhi,g
              ! artificial resistivity
              !
              vsigB = sqrt((dvx - projv*runix)**2 + (dvy - projv*runiy)**2 + (dvz - projv*runiz)**2)
+          if (gdsph) then
+             dBdissterm = avBtermj*(grkerni + grkernj)*vsigB
+          else
              dBdissterm = (avBterm*grkerni + avBtermj*grkernj)*vsigB
+          endif
 
              !--energy dissipation due to artificial resistivity
              if (useresistiveheat) dudtresist = -0.5*dB2*dBdissterm
 
+          if (gdsph) then
+             pmjrho21grkerni = pmassj*rho1i*rho1j*grkerni
+             pmjrho21grkernj = pmassj*rho1i*rho1j*grkernj
+          else
              pmjrho21grkerni = pmassj*rho21i*grkerni
              pmjrho21grkernj = pmassj*rho21j*grkernj
+          endif
 
              termi        = pmjrho21grkerni*projBi
              divBsymmterm =  termi + pmjrho21grkernj*projBj

@@ -25,7 +25,7 @@ module part
 ! :Dependencies: allocutils, dim, dtypekdtree, io, krome_user, mpiutils
 !
  use dim, only:ndim,maxp,maxpsph,ndivcurlv,ndivcurlB,maxvxyzu,maxalpha,&
-               maxptmass,maxdvdx,nsinkproperties,mhd,maxmhd,maxBevol,&
+               maxptmass,maxdvdx,nsinkproperties,mhd,gdsph,maxmhd,maxBevol,&
                maxp_h2,maxindan,nabundances,periodic,ind_timesteps,&
                maxgrav,ngradh,maxtypes,gravity,maxp_dustfrac,&
                use_dust,use_dustgrowth,track_lum,maxlum,nalpha,maxmhdni, &

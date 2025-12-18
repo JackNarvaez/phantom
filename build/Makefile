@@ -191,6 +191,9 @@ endif
 
 ifeq ($(MHD), yes)
     FPPFLAGS += -DMHD
+    ifeq ($(GDSPH), yes)
+        FPPFLAGS += -DGDSPH
+    endif
 endif
 
 ifeq ($(GR), yes)

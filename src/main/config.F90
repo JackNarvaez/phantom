@@ -203,6 +203,11 @@ module dim
  integer, parameter :: maxBevol  = 4  ! size of B-arrays (Bx,By,Bz,psi)
  integer, parameter :: ndivcurlB = 4
 
+#ifdef GDSPH
+  logical, parameter :: gdsph = .true.
+#else
+  logical, parameter :: gdsph = .false.
+#endif
 ! Non-ideal MHD
 ! if fast_divcurlB=true, then divcurlB is calculated simultaneous with density which leads to a race condition and errors (typically less than a percent)
 ! divcurlB is only used as diagnostics & divergence cleaning in ideal MHD, so fast_divcurlB=true is reasonable
