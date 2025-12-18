@@ -78,10 +78,10 @@ module setup
 ! :Dependencies: centreofmass, datafiles, dim, dust, eos, eos_stamatellos,
 !   extern_binary, extern_corotate, extern_lensethirring, externalforces,
 !   fileutils, grids_for_setup, growth, infile_utils, io, io_control,
-!   kernel, memory, options, orbits, part, partinject, physcon, porosity,
-!   prompting, radiation_utils, set_dust, set_dust_options, setbinary,
-!   setdisc, sethierarchical, setorbit, setunits, shock_capturing,
-!   spherical, systemutils, timestep, units, vectorutils, velfield
+!   kernel, memory, options, orbits, part, partinject, physcon, prompting,
+!   radiation_utils, set_dust, set_dust_options, setbinary, setdisc,
+!   sethierarchical, setorbit, setunits, shock_capturing, spherical,
+!   systemutils, timestep, units, vectorutils, velfield
 !
  use dim,              only:use_dust,maxalpha,use_dustgrowth,maxdusttypes,&
                             maxdustlarge,maxdustsmall,compiled_with_mcfost,gr
@@ -90,8 +90,7 @@ module setup
                             update_externalforce
  use extern_binary,    only:mass2,accradius1,accradius2,ramp,surface_force,eps_soft1
  use fileutils,        only:make_tags_unique
- use growth,           only:ifrag,isnow,rsnow,Tsnow,vfragSI,vfraginSI,vfragoutSI,gsizemincgs
- use porosity,         only:iporosity
+ use growth,           only:ifrag,isnow,rsnow,Tsnow,vfragSI,vfraginSI,vfragoutSI,gsizemincgs,iporosity
  use io,               only:master,warning,error,fatal
  use kernel,           only:hfact_default
  use options,          only:use_dustfrac,iexternalforce,use_hybrid,use_porosity
@@ -321,7 +320,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  endif
 
  !--set tmax and dtmax
- call set_tmax_dtmax()
+ call set_tmax_dtmax(fileprefix)
 
  if (do_radiation) then
     call set_radiation_and_gas_temperature_equal(npart,xyzh,vxyzu,massoftype,rad)
@@ -1132,6 +1131,7 @@ subroutine setup_discs(id,fileprefix,hfact,gamma,npart,polyk,&
  use setbinary,       only:Rochelobe_estimate
  use sethierarchical, only:get_hierarchical_level_com,get_hier_level_mass,hs
  use setdisc,         only:set_disc
+ use growth,          only:alpha_dg
  integer,           intent(in)    :: id
  character(len=20), intent(in)    :: fileprefix
  real,              intent(out)   :: hfact
@@ -1157,6 +1157,7 @@ subroutine setup_discs(id,fileprefix,hfact,gamma,npart,polyk,&
  incl    = incl*deg_to_rad
  posangl = posangl*deg_to_rad
  alpha = alphaSS
+ alpha_dg = alphaSS
  npart = 0
  npartoftype(:) = 0
 
@@ -2078,10 +2079,12 @@ end subroutine set_centreofmass
 !  Set tmax and dtmax for infile
 !
 !--------------------------------------------------------------------------
-subroutine set_tmax_dtmax()
+subroutine set_tmax_dtmax(fileprefix)
  use orbits,   only:get_T_flyby_hyp,get_T_flyby_par,get_orbital_period,get_time_between_true_anomalies
+ use setorbit, only:write_trajectory_to_file
  use timestep, only:tmax,dtmax
  use units,    only:in_code_units
+ character(len=*), intent(in) :: fileprefix
  real :: period,period1,period2,mu
  real :: flyby_d
  integer :: ierr
@@ -2106,8 +2109,9 @@ subroutine set_tmax_dtmax()
     !--time of flyby
     mu = m1+m2
     if (binary%input_type==2) then
-       ! for Flyby Reconstructor^TM input, compute time to reach observed separation
+       ! for Orbit Reconstructor^TM input, compute time to reach observed separation
        period = get_time_between_true_anomalies(mu,binary%a,binary%e,binary%f,binary%obs%f)
+       call write_trajectory_to_file(binary,m1,m2,fileprefix)
     else
        if (binary%e > 1.0) then
           period = get_T_flyby_hyp(mu,binary%e,binary%f,binary%a)
@@ -3317,8 +3321,8 @@ subroutine read_setupfile(filename,ierr)
        end select
        call read_inopt(pindex(i),'pindex'//trim(disclabel),db,errcount=nerr)
        if (lumdisc == 0) call read_inopt(qindex(i),'qindex'//trim(disclabel),db,errcount=nerr)
-       call read_inopt(posangl(i),'posangl'//trim(disclabel),db,min=0.,max=360.,errcount=nerr)
-       call read_inopt(incl(i),'incl'//trim(disclabel),db,min=0.,max=180.,errcount=nerr)
+       call read_inopt(posangl(i),'posangl'//trim(disclabel),db,min=-360.,max=360.,errcount=nerr)
+       call read_inopt(incl(i),'incl'//trim(disclabel),db,errcount=nerr)
        if (discstrat == 0 .and. lumdisc == 0) then
           call read_inopt(H_R(i),'H_R'//trim(disclabel),db,min=0.,errcount=nerr)
        endif

@@ -361,9 +361,10 @@ end function get_eccentricity_posvel_scalar
 !+
 !------------------------------------------------------------
 logical function orbit_is_parabolic(e)
+ real, parameter :: tol_eccentricity = 1.e-12
  real, intent(in) :: e
 
- if (abs(e-1.0) < epsilon(1.0)) then
+ if (abs(e-1.0) < tol_eccentricity) then
     orbit_is_parabolic = .true.
  else
     orbit_is_parabolic = .false.
@@ -713,12 +714,17 @@ end function get_true_anomaly
 !------------------------------------------------------------
 real function get_longitude_of_ascending_node(mu,dx,dv) result(Omega)
  real, intent(in) :: mu,dx(3),dv(3)
- real :: n_vec(3)
+ real :: n_vec(3), n_norm
 
  ! Longitude of ascending node: angle between line of nodes and x-axis
  ! -90.0 is because we define Omega as East of North
  n_vec = get_line_of_nodes_vector(dx,dv)
- Omega = atan2(n_vec(2),n_vec(1))*rad_to_deg - 90.0
+ n_norm = sqrt(dot_product(n_vec,n_vec))
+ if (n_norm < tiny(1.0)) then
+    Omega = 90.0
+ else
+    Omega = atan2(n_vec(2),n_vec(1))*rad_to_deg - 90.0
+ endif
 
 end function get_longitude_of_ascending_node
 
@@ -730,17 +736,31 @@ end function get_longitude_of_ascending_node
 real function get_argument_of_periapsis(mu,dx,dv) result(w)
  real, intent(in) :: mu,dx(3),dv(3)
  real :: n_vec(3),ecc_vec(3),h_hat(3)
- real :: ecc_proj_x,ecc_proj_y
+ real :: ecc_proj_x,ecc_proj_y,n_norm
 
  ecc_vec = get_eccentricity_vector(mu,dx,dv)
  h_hat = get_angmom_unit_vector(dx,dv)
  n_vec = get_line_of_nodes_vector(dx,dv)
 
- ! Argument of periapsis: angle between line of nodes and eccentricity vector
- ! Project eccentricity vector onto orbital plane and use atan2 for proper quadrant
- ecc_proj_x = dot_product(n_vec,ecc_vec)  ! component along line of nodes
- ecc_proj_y = dot_product(cross_product(n_vec,h_hat),ecc_vec)  ! component perpendicular to line of nodes
- w = -atan2(ecc_proj_y,ecc_proj_x)*rad_to_deg
+ n_norm = sqrt(dot_product(n_vec,n_vec))
+ if (n_norm < tiny(1.0)) then
+    ! i ~ 0 or 180: define w from the sky-plane periapsis direction.
+    w = atan2(ecc_vec(2),ecc_vec(1))*rad_to_deg
+    ! handle singularity with Omega=90 (Node along x-axis)
+    if (h_hat(3) < 0.0) then
+       ! retrograde: w_sky = 180 - w_orbit
+       w = 180.0 - w
+    else
+       ! prograde: w_sky = 180 + w_orbit
+       w = w - 180.0
+    endif
+ else
+    ! Argument of periapsis: angle between line of nodes and eccentricity vector
+    ! Project eccentricity vector onto orbital plane and use atan2 for proper quadrant
+    ecc_proj_x = dot_product(n_vec,ecc_vec)  ! component along line of nodes
+    ecc_proj_y = dot_product(cross_product(h_hat,n_vec),ecc_vec)  ! component perpendicular to line of nodes
+    w = atan2(ecc_proj_y,ecc_proj_x)*rad_to_deg
+ endif
 
 end function get_argument_of_periapsis
 
@@ -936,7 +956,8 @@ end function get_time_between_true_anomalies
 
 !----------------------------------------------------------------
 !+
-!  Calculate time between two true anomalies
+!  Calculate relative position and velocity vectors between
+!  two point masses
 !+
 !----------------------------------------------------------------
 subroutine get_dx_dv_ptmass(xyzmh_ptmass,vxyz_ptmass,dx,dv,i,j)
