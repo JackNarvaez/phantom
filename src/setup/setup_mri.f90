@@ -119,7 +119,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  hfact = hfact_default
 
 !--accretion radius
- accr1 = R_in
+ accr1 = 0.8*R_in
 
 !--viscosity
 ! Disc viscosity LP10. Switches are turned off.
