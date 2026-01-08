@@ -201,6 +201,7 @@ ifeq ($(SETUP), mri)
     KERNEL=quintic
     KNOWN_SETUP=yes
     IND_TIMESTEPS=yes
+    MODFILE=moddump_mri.f90
 endif
 
 ifeq ($(SETUP), boilingplanets)
