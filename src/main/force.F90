@@ -1630,20 +1630,16 @@ subroutine compute_forces(i,iamgasi,iamdusti,xpartveci,hi,hi1,hi21,hi41,gradhi,g
              vsigB = sqrt((dvx - projv*runix)**2 + (dvy - projv*runiy)**2 + (dvz - projv*runiz)**2)
           if (gdsph) then
              dBdissterm = avBtermj*(grkerni + grkernj)*vsigB
+             pmjrho21grkerni = pmassj*rho1i*rho1j*grkerni
+             pmjrho21grkernj = pmassj*rho1i*rho1j*grkernj
           else
              dBdissterm = (avBterm*grkerni + avBtermj*grkernj)*vsigB
+             pmjrho21grkerni = pmassj*rho21i*grkerni
+             pmjrho21grkernj = pmassj*rho21j*grkernj
           endif
 
              !--energy dissipation due to artificial resistivity
              if (useresistiveheat) dudtresist = -0.5*dB2*dBdissterm
-
-          if (gdsph) then
-             pmjrho21grkerni = pmassj*rho1i*rho1j*grkerni
-             pmjrho21grkernj = pmassj*rho1i*rho1j*grkernj
-          else
-             pmjrho21grkerni = pmassj*rho21i*grkerni
-             pmjrho21grkernj = pmassj*rho21j*grkernj
-          endif
 
              termi        = pmjrho21grkerni*projBi
              divBsymmterm =  termi + pmjrho21grkernj*projBj
@@ -1713,9 +1709,16 @@ subroutine compute_forces(i,iamgasi,iamdusti,xpartveci,hi,hi1,hi21,hi41,gradhi,g
 
           !--terms used in force
           gradp = gradpi + gradpj
-          projsx = projsxi + projsxj
-          projsy = projsyi + projsyj
-          projsz = projszi + projszj
+
+          if (gdsph) then
+             projsx = projsxi*(rhoi*rho1j) + projsxj*(rho1i*rhoj)
+             projsy = projsyi*(rhoi*rho1j) + projsyj*(rho1i*rhoj)
+             projsz = projszi*(rhoi*rho1j) + projszj*(rho1i*rhoj)
+          else
+             projsx = projsxi + projsxj
+             projsy = projsyi + projsyj
+             projsz = projszi + projszj
+          endif
 
           fsum(ifxi) = fsum(ifxi) - runix*(gradp + fgrav) - projsx
           fsum(ifyi) = fsum(ifyi) - runiy*(gradp + fgrav) - projsy
