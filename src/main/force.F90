@@ -1437,6 +1437,10 @@ subroutine compute_forces(i,iamgasi,iamdusti,xpartveci,hi,hi1,hi21,hi41,gradhi,g
              projdB = dBx*runix + dBy*runiy + dBz*runiz
              dB2 = dBx*dBx + dBy*dBy + dBz*dBz
              divBdiffterm = -pmassj*projdB*grkerni
+             !divBdiffterm = -0.5*pmassj*projdB*(grkerni+grkernj)
+             !if (gdsph) then
+             !    divBdiffterm = divBdiffterm * rhoi/rhoj
+             !endif
           endif
        else
           !-- v_sig for pairs of particles that are not gas-gas
@@ -1632,6 +1636,8 @@ subroutine compute_forces(i,iamgasi,iamdusti,xpartveci,hi,hi1,hi21,hi41,gradhi,g
              dBdissterm = avBtermj*(grkerni + grkernj)*vsigB
              pmjrho21grkerni = pmassj*rho1i*rho1j*grkerni
              pmjrho21grkernj = pmassj*rho1i*rho1j*grkernj
+             !pmjrho21grkerni = 0.5*pmassj*rho1i*rho1j*(grkerni+grkernj)
+             !pmjrho21grkernj = pmjrho21grkerni
           else
              dBdissterm = (avBterm*grkerni + avBtermj*grkernj)*vsigB
              pmjrho21grkerni = pmassj*rho21i*grkerni
@@ -2924,6 +2930,7 @@ subroutine finish_cell_and_store_results(icall,cell,fxyzu,xyzh,vxyzu,poten,dt,dv
              frac_divB = 1.0
           elseif (betai < 10.0) then
              frac_divB = (10.0 - betai)*0.125
+             ! frac_divB = 2.0 - betai
           else
              frac_divB = 0.0
           endif
