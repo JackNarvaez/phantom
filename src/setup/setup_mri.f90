@@ -92,7 +92,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  R_ref      = 1.
  pindex     = 1.
  qindex     = 0.25
- alphaSS    = 0.005
+ alphaSS    = 0.001
  alphaMX    = 1.0
  posangl    = 0.
  incl       = 0.
@@ -105,7 +105,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
 
 !--simulation time
  deltat     = 0.1
- norbits    = 1
+ norbits    = 20
  nfulldump  = 1
 
 !--setup equation of state
@@ -114,7 +114,7 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  qfacdisc = qindex
 
 !--resolution
- npart = 1e5
+ npart = 1e7
  npartoftype(igas) = npart
  hfact = hfact_default
 
