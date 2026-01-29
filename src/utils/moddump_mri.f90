@@ -25,28 +25,31 @@ subroutine modify_dump(npart,npartoftype,massoftype,xyzh,vxyzu)
  use part,         only:Bxyz,mhd,rhoh,igas
  use setup_params, only:ihavesetupB
  use timestep,     only:overcleanfac
- use eos,          only:qfacdisc
-  use io,          only:fatal
+ use eos,          only:qfacdisc, polyk
+ use io,           only:fatal
+ use viscosity,    only:irealvisc
+ use options,           only:ieos
  integer, intent(in)    :: npartoftype(:)
  real,    intent(in)    :: massoftype(:)
  integer, intent(inout) :: npart
  real,    intent(inout) :: xyzh(:,:),vxyzu(:,:)
  integer :: npart_start_count,npart_tot,igeom,i
  real    :: Bzero,pmassii,phi
- real    :: pindex,qindex,cs0,betaP
+ real    :: pindex,qindex,betaP
  real    :: r,r2,cs02,cs2,pressure
  real    :: vphiold2,vphiold,vadd,vphiadd2,corrf
  logical :: reverse_field_dir
 
  ! Must check that this is the same as in setup_disc
- cs0 = 0.05
- cs02 = cs0*cs0
+ cs02 = polyk
 
  qindex = qfacdisc
  pindex = 1
 
- npart_start_count=1
- npart_tot=npart
+ npart_start_count = 1
+ npart_tot = npart
+ irealvisc = 0
+ ieos = 3
 
 !--add magnetic field
 !--only 'toroidal' and 'vertical' geometries supported
@@ -114,7 +117,7 @@ subroutine modify_dump(npart,npartoftype,massoftype,xyzh,vxyzu)
 
     print '(A,F12.4)',' pindex     = ', pindex
     print '(A,F12.4)',' qindex     = ', qindex
-    print '(A,F12.4)',' cs0        = ', cs0
+    print '(A,F12.4)',' cs02       = ', cs02
 
     print*,' ---------------- MHD --------------- '
     print '(A,L5)'   ,' mhd        = ', mhd
