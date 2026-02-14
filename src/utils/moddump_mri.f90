@@ -28,7 +28,8 @@ subroutine modify_dump(npart,npartoftype,massoftype,xyzh,vxyzu)
  use eos,          only:qfacdisc, polyk
  use io,           only:fatal
  use viscosity,    only:irealvisc
- use options,           only:ieos
+ use options,      only:ieos
+ use dim,          only:maxdvdx
  integer, intent(in)    :: npartoftype(:)
  real,    intent(in)    :: massoftype(:)
  integer, intent(inout) :: npart
@@ -124,6 +125,7 @@ subroutine modify_dump(npart,npartoftype,massoftype,xyzh,vxyzu)
     print '(A,I12)'  ,' geometry   = ', igeom
     print '(A,F12.4)',' beta_mag   = ', betaP
     print '(A,L5)'   ,' orientaton = ', reverse_field_dir
+    print '(A,I12)'  ,' maxdvdx    = ', maxdvdx
 
     print*, ""
     print*,'|---------- END SETUP FILE ----------|'

@@ -159,6 +159,8 @@ module dim
 
  ! storage of velocity derivatives
  integer :: maxdvdx = 0  ! set to maxp when memory allocated
+ ! storage of artificial dissipations
+ integer :: maxdudt = 0  ! set to maxp when memory allocated
 
  ! periodic boundaries
 #ifdef PERIODIC
@@ -410,6 +412,7 @@ subroutine update_max_sizes(n,ntot)
 
  if (mhd) then
     maxmhd = maxp
+    maxdudt = maxp
     if (mhd_nonideal) maxmhdni = maxp
  endif
 

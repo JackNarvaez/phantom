@@ -25,7 +25,7 @@ module part
 ! :Dependencies: allocutils, dim, dtypekdtree, io, krome_user, mpiutils
 !
  use dim, only:ndim,maxp,maxpsph,ndivcurlv,ndivcurlB,maxvxyzu,maxalpha,&
-               maxptmass,maxdvdx,nsinkproperties,mhd,gdsph,maxmhd,maxBevol,&
+               maxptmass,maxdvdx,maxdudt,nsinkproperties,mhd,gdsph,maxmhd,maxBevol,&
                maxp_h2,maxindan,nabundances,periodic,ind_timesteps,&
                maxgrav,ngradh,maxtypes,gravity,maxp_dustfrac,&
                use_dust,use_dustgrowth,track_lum,maxlum,nalpha,maxmhdni, &
@@ -114,6 +114,15 @@ module part
    (/'dvxdx','dvxdy','dvxdz', &
      'dvydx','dvydy','dvydz', &
      'dvzdx','dvzdy','dvzdz'/)
+
+!
+!--artificial dissipations and symmetric strain rate tensor
+!
+ real, allocatable :: dudtart(:,:)
+ character(len=*), parameter :: dudtart_label(3) = &
+   (/'dudtAV','dudtAR','djvi2 '/)
+
+
 !
 !--H2 chemistry
 !
@@ -457,6 +466,7 @@ subroutine allocate_part
  call allocate_array('alphaind', alphaind, nalpha, maxalpha)
  call allocate_array('divcurlv', divcurlv, ndivcurlv, maxp)
  call allocate_array('dvdx', dvdx, 9, maxp)
+ call allocate_array('dudtart', dudtart, 3, maxp)
  call allocate_array('divcurlB', divcurlB, ndivcurlB, maxp)
  call allocate_array('Bevol', Bevol, maxBevol, maxmhd)
  call allocate_array('apr_level',apr_level,maxp_apr)
@@ -552,6 +562,7 @@ subroutine deallocate_part
  if (allocated(alphaind)) deallocate(alphaind)
  if (allocated(divcurlv)) deallocate(divcurlv)
  if (allocated(dvdx))     deallocate(dvdx)
+ if (allocated(dudtart))  deallocate(dudtart)
  if (allocated(divcurlB)) deallocate(divcurlB)
  if (allocated(Bevol))    deallocate(Bevol)
  if (allocated(Bxyz))     deallocate(Bxyz)
@@ -670,6 +681,7 @@ subroutine init_part
  if (maxalpha==maxp)  alphaind = 0.
  divcurlv = 0.
  if (maxdvdx==maxp) dvdx = 0.
+ if (maxdudt==maxp) dudtart = 0.
  if (ndivcurlB > 0) divcurlB = 0.
  if (maxgrav > 0) poten = 0.
  if (use_dust) then
@@ -1335,6 +1347,7 @@ subroutine copy_particle_all(src,dst,new_part)
  divcurlv(:,dst) = divcurlv(:,src)
  if (ndivcurlB > 0) divcurlB(:,dst) = divcurlB(:,src)
  if (maxdvdx ==maxp)  dvdx(:,dst) = dvdx(:,src)
+ if (maxdudt ==maxp)  dudtart(:,dst) = dudtart(:,src)
  if (maxalpha ==maxp) alphaind(:,dst) = alphaind(:,src)
  if (maxgradh ==maxp) gradh(:,dst) = gradh(:,src)
  if (maxphase ==maxp) iphase(dst) = iphase(src)
@@ -1448,6 +1461,7 @@ subroutine combine_two_particles(keep,discard)
  divcurlv(:,keep) = factor*(divcurlv(:,keep) + divcurlv(:,discard))
  if (ndivcurlB > 0) divcurlB(:,keep) = factor*(divcurlB(:,keep) + divcurlB(:,discard))
  if (maxdvdx ==maxp)  dvdx(:,keep) = factor*(dvdx(:,keep) + dvdx(:,discard))
+ if (maxdudt ==maxp)  dudtart(:,keep) = factor*(dudtart(:,keep) + dudtart(:,discard))
  if (maxalpha ==maxp) alphaind(:,keep) = factor*(alphaind(:,keep) + alphaind(:,discard))
  if (maxgradh ==maxp) gradh(:,keep) = factor*(gradh(:,keep) + gradh(:,discard))
  if (maxphase ==maxp .and. (iphase(keep) /= iphase(discard))) make_warning = .true.
