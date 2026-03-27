@@ -57,24 +57,24 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  real,              intent(inout) :: time
  character(len=20), intent(in)    :: fileprefix
  real :: R_in,R_out,R_ref
- real :: pindex,qindex,q_z,H_R
+ real :: pindex,qindex,H_R
  real :: alphaSS,alphaMX
  real :: posangl,incl
  real :: Mdisc,Mstar
  real :: period,deltat
  real :: accr1
- real :: pmassi
- real    :: beta,Bzero,phi
- real    :: R2,R,z2,vkep2,cs2,pressure
- real    :: vnew2
+ real :: pmassii
+ real    :: betaP,Bzero,phi
+ real    :: R2,R,vkep2,cs2,pressure,corrf,vnew2
  integer :: norbits
  integer :: icentral
  integer :: nsinks
  integer :: i
+ integer :: igeom
  integer :: visc
- logical :: ismoothgas,shearz
+ logical :: ismoothgas
  logical :: nsvisc
- character(len=16) :: geometry
+ logical :: reverse_field_dir
 
 ! set code units
  call set_units(dist=au,mass=solarm,G=1.d0)
@@ -100,7 +100,6 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  Mstar      = 1.0
  Mdisc      = 0.05
  ismoothgas = .true.
- shearz     = .true.
  nsvisc     = .false.  ! SS viscosity
 
 !--simulation time
@@ -189,66 +188,60 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  dtmax  = deltat*period
  tmax   = norbits*period
 
-!--add vertical shear
- if (shearz) then
-  q_z = qindex
- else
-  q_z = 0.0
- endif
-
 !--add magnetic field
 !--only 'toroidal' and 'vertical' geometries supported
 !--field set using constant plasma beta and isothermal pressure
  if (mhd) then
   ihavesetupB   = .true.
   overcleanfac  = 1.0
-  geometry = 'toroidal'
-  beta = 25.
+  igeom = 1  ! 1: toroidal; 2: vertical
+  betaP = 25.
+  reverse_field_dir = .false. ! if true: clockwise
+
+  select case(igeom)
+  case(1)
+      corrf = -(pindex+qindex-0.5)/betaP
+  case(2)
+     corrf = -(1.5+pindex+qindex)/betaP
+  case default
+     call fatal('set_Bfield','unknown field geometry')
+  end select
 
   do i = 1,npart
    R2        = xyzh(1,i)**2 + xyzh(2,i)**2
-   z2        = xyzh(3,i)**2
    R         = sqrt(R2)
    phi       = atan2(xyzh(2,i),xyzh(1,i))
    vkep2     = Mstar/R
    cs2       = polyk*R2**(-qindex)
-   pmassi    = massoftype(igas)
-   pressure  = cs2*rhoh(xyzh(4,i),pmassi)
-   Bzero     = sqrt(2.*pressure/beta)
+   pmassii   = massoftype(igas)
+   pressure  = cs2*rhoh(xyzh(4,i),pmassii)
+   Bzero     = sqrt(2.*pressure/betaP)
+
+   if (reverse_field_dir) Bzero = -Bzero
   
-  ! toroidal magnetic field (Bphi)
-  if (geometry == 'toroidal') then
-   Bxyz(1,i) = -Bzero*sin(phi)
-   Bxyz(2,i) = Bzero*cos(phi)
-   Bxyz(3,i) = 0.0d0
-  ! vertical magnetic field (Bz)
-  elseif (geometry == 'vertical') then
-   Bxyz(1,i) = 0.0d0
-   Bxyz(2,i) = 0.0d0
-   Bxyz(3,i) = Bzero
-  else
-   print *, 'Error: Unknown magnetic field geometry: ', trim(geometry)
-   stop
-  endif
+   select case(igeom)
+   ! toroidal magnetic field (Bphi)
+   case(1)
+    Bxyz(1,i) = -Bzero*sin(phi)
+    Bxyz(2,i) = Bzero*cos(phi)
+    Bxyz(3,i) = 0.0d0
+
+   ! vertical magnetic field (Bz)
+   case(2)
+    Bxyz(1,i) = 0.0d0
+    Bxyz(2,i) = 0.0d0
+    Bxyz(3,i) = Bzero
+
+   case default
+    call fatal('set_Bfield','unknown field geometry')
+   end select
 
    ! calculate correction in v_phi due to B
-   vnew2      = vkep2-(cs2*(1.5+pindex+qindex)+q_z*vkep2*z2/R2)*(1.+1./beta);
-   vxyzu(1,i) = -sqrt(vnew2)*sin(phi)
-   vxyzu(2,i) =  sqrt(vnew2)*cos(phi)
-   vxyzu(3,i) = 0.0d0
-  enddo
-!--if vertical shear is on, then add dependency on z for ang.vel
- elseif (shearz) then
-  do i=1,npart
-   R2        = xyzh(1,i)**2 + xyzh(2,i)**2
-   z2        = xyzh(3,i)**2
-   R         = sqrt(R2)
-   phi       = atan2(xyzh(2,i),xyzh(1,i))
-   vkep2     = Mstar/R
-   cs2       = polyk*R2**(-qindex)
-
-   ! calculate correction in v_phi due to B
-   vnew2      = vkep2-(cs2*(1.5+pindex+qindex)+q_z*vkep2*z2/R2);
+   vnew2      = vkep2 - cs2*(1.5+pindex+qindex) + corrf*cs2;
+   if (vnew2 < 0) then
+    print*, 'WARNING: vnew2 < 0 for particle ', i, ' — correction skipped'
+    vnew2 = vkep2
+   endif
    vxyzu(1,i) = -sqrt(vnew2)*sin(phi)
    vxyzu(2,i) =  sqrt(vnew2)*cos(phi)
    vxyzu(3,i) = 0.0d0
@@ -267,8 +260,8 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  print '(A,F12.4)',' RdAcc      = ', accr1
  print*,' ---------------- MHD --------------- '
  print '(A,L5)'   ,' mhd        = ', mhd
- print '(A,A)'    ,' geometry   = ', trim(geometry)
- print '(A,F12.4)',' beta_mag   = ', beta
+ print '(A,I12)'  ,' geometry   = ', igeom
+ print '(A,F12.4)',' beta_mag   = ', betaP
  print*,' ---------------- VISC --------------- '
  print '(A,F12.4)',' alpha      = ', alpha
  print '(A,I12)'  ,' irealvisc  = ', irealvisc
@@ -277,7 +270,6 @@ subroutine setpart(id,npart,npartoftype,xyzh,massoftype,vxyzu,polyk,gamma,hfact,
  print '(A,I12,A)',' visc       = ', visc        ,' (1: AVC; 2: AVM; 3: DVA; 4:DVN)'
  print '(A,I12)'  ,' maxalpha   = ', maxalpha
  print '(A,I12,A)',' nalpha     = ', nalpha      ,' (0: none; 1: Morris-Monaghan; 3: Cullen-Dehnen)'
- print '(A,L5)'   ,' zth-shear  = ', shearz
 
  print*, ""
  print*,'|---------- END SETUP FILE ----------|'

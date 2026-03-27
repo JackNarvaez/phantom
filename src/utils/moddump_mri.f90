@@ -37,7 +37,7 @@ subroutine modify_dump(npart,npartoftype,massoftype,xyzh,vxyzu)
  integer :: npart_start_count,npart_tot,igeom,i
  real    :: Bzero,pmassii,phi
  real    :: pindex,qindex,betaP
- real    :: r,r2,cs02,cs2,pressure
+ real    :: R,R2,cs02,cs2,pressure
  real    :: vphiold2,vphiold,vadd,vphiadd2,corrf
  logical :: reverse_field_dir
 
@@ -73,10 +73,10 @@ subroutine modify_dump(npart,npartoftype,massoftype,xyzh,vxyzu)
 
 ! Set up a magnetic field just in Bphi
     do i = npart_start_count,npart_tot
-       r2 = xyzh(1,i)**2 + xyzh(2,i)**2
-       r = sqrt(r2)
+       R2 = xyzh(1,i)**2 + xyzh(2,i)**2
+       R = sqrt(R2)
        phi = atan2(xyzh(2,i),xyzh(1,i))
-       cs2 = cs02*r2**(-qindex)
+       cs2 = cs02*R2**(-qindex)
        pmassii = massoftype(igas)
        pressure = cs2*rhoh(xyzh(4,i),pmassii)
        Bzero = sqrt(2.*pressure/betaP)
@@ -101,10 +101,13 @@ subroutine modify_dump(npart,npartoftype,massoftype,xyzh,vxyzu)
        end select
 
        ! Calculate correction in v_phi due to B
-        vphiold = (-xyzh(2,i)*vxyzu(1,i) + xyzh(1,i)*vxyzu(2,i))/r
+        vphiold = (-xyzh(2,i)*vxyzu(1,i) + xyzh(1,i)*vxyzu(2,i))/R
         vphiold2 = vphiold*vphiold
         vphiadd2 = vphiold2 + corrf*cs2
-        if (vphiadd2<0) vphiadd2 = vphiold2
+        if (vphiadd2<0) then
+         print*, 'WARNING: vphiadd2 < 0 for particle ', i, ' — correction skipped'
+         vphiadd2 = vphiold2
+        endif
         vadd = sqrt(vphiadd2)
         vxyzu(1,i) = vxyzu(1,i) + sin(phi)*(vphiold - vadd)
         vxyzu(2,i) = vxyzu(2,i) - cos(phi)*(vphiold - vadd)
@@ -116,16 +119,16 @@ subroutine modify_dump(npart,npartoftype,massoftype,xyzh,vxyzu)
     print*,'|------------ PARAMETERS ------------|'
     print*, ""
 
-    print '(A,F12.4)',' pindex     = ', pindex
-    print '(A,F12.4)',' qindex     = ', qindex
-    print '(A,F12.4)',' cs02       = ', cs02
+    print '(A,F12.4)',' pindex      = ', pindex
+    print '(A,F12.4)',' qindex      = ', qindex
+    print '(A,F12.4)',' cs02        = ', cs02
 
     print*,' ---------------- MHD --------------- '
-    print '(A,L5)'   ,' mhd        = ', mhd
-    print '(A,I12)'  ,' geometry   = ', igeom
-    print '(A,F12.4)',' beta_mag   = ', betaP
-    print '(A,L5)'   ,' orientaton = ', reverse_field_dir
-    print '(A,I12)'  ,' maxdvdx    = ', maxdvdx
+    print '(A,L5)'   ,' mhd         = ', mhd
+    print '(A,I12)'  ,' geometry    = ', igeom
+    print '(A,F12.4)',' beta_mag    = ', betaP
+    print '(A,L5)'   ,' orientation = ', reverse_field_dir
+    print '(A,I12)'  ,' maxdvdx     = ', maxdvdx
 
     print*, ""
     print*,'|---------- END SETUP FILE ----------|'
