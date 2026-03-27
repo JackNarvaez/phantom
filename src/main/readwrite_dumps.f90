@@ -253,7 +253,7 @@ subroutine write_fulldump(t,dumpfile,ntotal,iorder,sphNG)
        call write_array(1,xyzh,xyzh_label,1,npart,k,ipass,idump,nums,nerr,use_kind=4,index=4)
        if (maxalpha==maxp) call write_array(1,alphaind,(/'alpha'/),1,npart,k,ipass,idump,nums,nerr)
        call write_array(1,divcurlv,divcurlv_label,ndivcurlv,npart,k,ipass,idump,nums,nerr)
-       if (maxdvdx==maxp) call write_array(1,dvdx,dvdx_label,9,npart,k,ipass,idump,nums,nerr)
+       !if (maxdvdx==maxp) call write_array(1,dvdx,dvdx_label,9,npart,k,ipass,idump,nums,nerr)
        if (maxdudt==maxp) call write_array(1,dudtart,dudtart_label,3,npart,k,ipass,idump,nums,nerr)
        if (gravity .and. maxgrav==maxp) then
           call write_array(1,poten,'poten',npart,k,ipass,idump,nums,nerr)
