@@ -1441,9 +1441,9 @@ subroutine compute_forces(i,iamgasi,iamdusti,xpartveci,hi,hi1,hi21,hi41,gradhi,g
              dB2 = dBx*dBx + dBy*dBy + dBz*dBz
              divBdiffterm = -pmassj*projdB*grkerni
              !divBdiffterm = -0.5*pmassj*projdB*(grkerni+grkernj)
-             !if (gdsph) then
-             !    divBdiffterm = divBdiffterm * rhoi/rhoj
-             !endif
+             if (gdsph) then
+                 divBdiffterm = divBdiffterm * rhoi/rhoj
+             endif
           endif
        else
           !-- v_sig for pairs of particles that are not gas-gas
