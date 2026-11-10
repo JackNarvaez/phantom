@@ -176,7 +176,10 @@ module forces
        idviz          = 28 + 5*(maxdustsmall-1), &
        idensgasi      = 29 + 5*(maxdustsmall-1), &
        icsi           = 30 + 5*(maxdustsmall-1), &
-       idradi         = 31 + 5*(maxdustsmall-1)
+       idradi         = 31 + 5*(maxdustsmall-1), &
+ !--artificial viscosity and resistivity heating (stored for output)
+       idudtavi       = 32 + 5*(maxdustsmall-1), &
+       idudtari       = 33 + 5*(maxdustsmall-1)
 
  private
 
@@ -197,7 +200,7 @@ subroutine force(icall,npart,xyzh,vxyzu,fxyzu,divcurlv,divcurlB,Bevol,dBevol,&
  use part,         only:rhoh,dhdrho,rhoanddhdrho,alphaind,iactive,gradh,&
                         hrho,iphase,igas,maxgradh,dvdx,eta_nimhd,deltav,poten,iamtype,&
                         dragreg,filfac,fxyz_dragold,nptmass,shortsinktree,&
-                        fxyz_ptmass_tree,bin_info,ipertg, dudtart
+                        fxyz_ptmass_tree,bin_info,ipertg
  use timestep,     only:dtcourant,dtforce,dtrad,bignumber,dtdiff
  use io_summary,   only:summary_variable, &
                         iosumdtf,iosumdtd,iosumdtv,iosumdtc,iosumdto,iosumdth,iosumdta, &
@@ -421,7 +424,6 @@ subroutine force(icall,npart,xyzh,vxyzu,fxyzu,divcurlv,divcurlB,Bevol,dBevol,&
 !$omp shared(divcurlv) &
 !$omp shared(iphase) &
 !$omp shared(dvdx) &
-!$omp shared(dudtart) &
 !$omp shared(gradh) &
 !$omp shared(divcurlb) &
 !$omp shared(bevol) &
@@ -915,12 +917,12 @@ subroutine compute_forces(i,iamgasi,iamdusti,xpartveci,hi,hi1,hi21,hi41,gradhi,g
                           dustfrac,dustprop,fxyz_drag,gradh,divcurlv,alphaind, &
                           alphau,alphaB,bulkvisc,stressmax,&
                           ndrag,nstokes,nsuper,ts_min,ibinnow_m1,ibin_wake,ibin_neighi,&
-                          ignoreself,rad,radprop,dens,metrics,apr_level,dt,dudtart_local)
+                          ignoreself,rad,radprop,dens,metrics,apr_level,dt)
  use kernel,      only:grkern,cnormk,radkern2
  use part,        only:igas,idust,isink,iohm,ihall,iambi,maxphase,iactive,xyzmh_ptmass,&
                        iamtype,iamdust,get_partinfo,mhd,gdsph,maxvxyzu,maxdvdx,igasP,ics,iradP,itemp,&
                        ihsoft
- use dim,         only:maxalpha,maxp,mhd_nonideal,gravity,gr,use_apr,isothermal,use_sinktree,disc_viscosity,track_lum,maxdudt
+ use dim,         only:maxalpha,maxp,mhd_nonideal,gravity,gr,use_apr,isothermal,use_sinktree,disc_viscosity,track_lum
  use part,        only:rhoh,dvdx,aprmassoftype,shortsinktree
  use nicil,       only:nimhd_get_jcbcb,nimhd_get_dBdt
  use eos,         only:ieos,eos_is_non_ideal,icooling
@@ -988,7 +990,6 @@ subroutine compute_forces(i,iamgasi,iamdusti,xpartveci,hi,hi1,hi21,hi41,gradhi,g
  real,            intent(inout) :: radprop(:,:)
  integer(kind=1), intent(in)    :: apr_level(:)
  real,            intent(in)    :: dt
- real,            intent(out)   :: dudtart_local(3)
  integer :: j,n,iamtypej
  logical :: iactivej,iamgasj,iamdustj,sinkinpair,iamsinki,iamsinkj,is_neigh
  real    :: rij2,q2i,qi,xj,yj,zj,dx,dy,dz,runix,runiy,runiz,rij1,hfacgrkern
@@ -1126,7 +1127,6 @@ subroutine compute_forces(i,iamgasi,iamdusti,xpartveci,hi,hi1,hi21,hi41,gradhi,g
  endif
 
  fsum(:) = 0.
- dudtart_local(:) = 0.
  vsigmax = 0.
  pmassonrhoi = pmassi*rho1i
  hfacgrkern  = hi41*cnormk*gradhi
@@ -1647,11 +1647,9 @@ subroutine compute_forces(i,iamgasi,iamdusti,xpartveci,hi,hi1,hi21,hi41,gradhi,g
              pmjrho21grkernj = pmassj*rho21j*grkernj
           endif
 
-             !--store separately dissipation and resistivity contributions
-             if (maxdudt==maxp) then
-                dudtart_local(1) = dudtart_local(1) + pmassj*qrho2i*projv*grkerni
-                dudtart_local(2) = dudtart_local(2) - 0.5*dB2*dBdissterm
-             endif
+             !--store separately dissipation and resistivity contributions (for output only)
+             fsum(idudtavi) = fsum(idudtavi) + pmassj*qrho2i*projv*grkerni
+             fsum(idudtari) = fsum(idudtari) - 0.5*dB2*dBdissterm
 
              !--energy dissipation due to artificial resistivity
              if (useresistiveheat) dudtresist = -0.5*dB2*dBdissterm
@@ -1726,6 +1724,9 @@ subroutine compute_forces(i,iamgasi,iamdusti,xpartveci,hi,hi1,hi21,hi41,gradhi,g
           gradp = gradpi + gradpj
 
           if (gdsph) then
+             !--magnetic pressure with geometric density weighting: replace 1/rho^2 (in pro2) by 1/(rho_a rho_b)
+             gradp = gradp + 0.5*pmassj*((Bxi*Bxi + Byi*Byi + Bzi*Bzi)*(rho1i*rho1j - rho21i)*grkerni &
+                                       + (Bxj*Bxj + Byj*Byj + Bzj*Bzj)*(rho1i*rho1j - rho21j)*grkernj)
              projsx = projsxi*(rhoi*rho1j) + projsxj*(rho1i*rhoj)
              projsy = projsyi*(rhoi*rho1j) + projsyj*(rho1i*rhoj)
              projsz = projszi*(rhoi*rho1j) + projszj*(rho1i*rhoj)
@@ -1751,11 +1752,6 @@ subroutine compute_forces(i,iamgasi,iamdusti,xpartveci,hi,hi1,hi21,hi41,gradhi,g
           if (maxvxyzu >= 4 .or. track_lum) then
              !--viscous heating
              fsum(idudtdissi) = fsum(idudtdissi) + dudtdissi + dudtresist
-             !--store dissipation and resistivity separately for MHD
-             if (mhd) then
-                dudtart_local(1) = dudtart_local(1) + dudtdissi
-                dudtart_local(2) = dudtart_local(2) + dudtresist
-             endif
              !--energy dissipation due to conductivity
              fsum(idendtdissi) = fsum(idendtdissi) + dendissterm
           endif
@@ -2515,8 +2511,7 @@ subroutine compute_cell(cell,listneigh,nneigh,Bevol,xyzh,vxyzu,fxyzu, &
  use io,              only:error,id,master
  use dim,             only:maxvxyzu,use_apr,use_sinktree
  use options,         only:implicit_radiation
- use part,            only:get_partinfo,iamgas,mhd,igas,isink,maxphase,massoftype,aprmassoftype, &
-                                    dudtart,maxdudt,maxp
+ use part,            only:get_partinfo,iamgas,mhd,igas,isink,maxphase,massoftype,aprmassoftype
  use viscosity,       only:irealvisc,bulkvisc
  use eos,             only:iresistive_heating
  use shock_capturing, only:beta,alphau,alphaB
@@ -2548,13 +2543,11 @@ subroutine compute_cell(cell,listneigh,nneigh,Bevol,xyzh,vxyzu,fxyzu, &
  real,            intent(in)     :: dens(:),metrics(:,:,:,:)
  real,            intent(in)     :: dt
  integer(kind=1), intent(in)     :: apr_level(:)
- 
+
  real                            :: hi
  real(kind=8)                    :: hi1,hi21,hi31,hi41
  real(kind=8)                    :: gradhi,gradsofti
  real                            :: pmassi
- real                            :: dudtart_local(3)
- 
 
  integer                         :: iamtypei
 
@@ -2629,23 +2622,16 @@ subroutine compute_cell(cell,listneigh,nneigh,Bevol,xyzh,vxyzu,fxyzu, &
     !--loop over current particle's neighbours (includes self)
     !
     ignoreself = (cell%owner == id)
-    dudtart_local = 0.0
     call compute_forces(i,iamgasi,iamdusti,cell%xpartvec(:,ip),hi,hi1,hi21,hi41,gradhi,gradsofti, &
-                    beta, &
-                    pmassi,listneigh,nneigh,xyzcache,cell%fsums(:,ip),cell%vsigmax(ip), &
-                    .true.,realviscosity,useresistiveheat, &
-                    xyzh,vxyzu,Bevol,cell%iphase(ip),iphase,massoftype, &
-                    divcurlB,eta_nimhd,eos_vars, &
-                    dustfrac,dustprop,fxyz_drag,gradh,divcurlv,alphaind, &
-                    alphau,alphaB,bulkvisc,stressmax, &
-                    cell%ndrag,cell%nstokes,cell%nsuper,cell%tsmin(ip),ibinnow_m1,ibin_wake,cell%ibinneigh(ip), &
-                    ignoreself,rad,radprop,dens,metrics,apr_level,dt,dudtart_local)
-
-    ! store per-particle dudt contributions once (thread-safe)
-    if (mhd .and. maxdudt==maxp) then
-       dudtart(1,i) = dudtart_local(1)
-       dudtart(2,i) = dudtart_local(2)
-    endif
+                         beta, &
+                         pmassi,listneigh,nneigh,xyzcache,cell%fsums(:,ip),cell%vsigmax(ip), &
+                         .true.,realviscosity,useresistiveheat, &
+                         xyzh,vxyzu,Bevol,cell%iphase(ip),iphase,massoftype, &
+                         divcurlB,eta_nimhd,eos_vars, &
+                         dustfrac,dustprop,fxyz_drag,gradh,divcurlv,alphaind, &
+                         alphau,alphaB,bulkvisc,stressmax, &
+                         cell%ndrag,cell%nstokes,cell%nsuper,cell%tsmin(ip),ibinnow_m1,ibin_wake,cell%ibinneigh(ip), &
+                         ignoreself,rad,radprop,dens,metrics,apr_level,dt)
 
  enddo over_parts
 
@@ -3124,6 +3110,8 @@ subroutine finish_cell_and_store_results(icall,cell,fxyzu,xyzh,vxyzu,poten,dt,dv
              dtclean   = C_cour*hi/(vcleani + tiny(0.))
           endif
           if (maxdudt==maxp) then
+             dudtart(1,i) = fsum(idudtavi)
+             dudtart(2,i) = fsum(idudtari)
              straini = strain_from_dvdx(dvdxi(:))
              dudtart(3,i) = straini(1)**2 + 2.*(straini(2)**2 + straini(3)**2 + straini(5)**2) &
                             + straini(4)**2 + straini(6)**2
