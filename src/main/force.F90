@@ -1648,7 +1648,11 @@ subroutine compute_forces(i,iamgasi,iamdusti,xpartveci,hi,hi1,hi21,hi41,gradhi,g
           endif
 
              !--store separately dissipation and resistivity contributions (for output only)
-             fsum(idudtavi) = fsum(idudtavi) + pmassj*qrho2i*projv*grkerni
+             if (gdsph) then
+                fsum(idudtavi) = fsum(idudtavi) + pmassj*qrho2i*(rhoi*rho1j)*projv*grkerni
+             else
+                fsum(idudtavi) = fsum(idudtavi) + pmassj*qrho2i*projv*grkerni
+             endif
              fsum(idudtari) = fsum(idudtari) - 0.5*dB2*dBdissterm
 
              !--energy dissipation due to artificial resistivity
@@ -1721,16 +1725,15 @@ subroutine compute_forces(i,iamgasi,iamdusti,xpartveci,hi,hi1,hi21,hi41,gradhi,g
           endif
 
           !--terms used in force
-          gradp = gradpi + gradpj
-
           if (gdsph) then
-             !--magnetic pressure with geometric density weighting: replace 1/rho^2 (in pro2) by 1/(rho_a rho_b)
-             gradp = gradp + 0.5*pmassj*((Bxi*Bxi + Byi*Byi + Bzi*Bzi)*(rho1i*rho1j - rho21i)*grkerni &
-                                       + (Bxj*Bxj + Byj*Byj + Bzj*Bzj)*(rho1i*rho1j - rho21j)*grkernj)
+             !--geometric density weighting: replace 1/rho^2 by 1/(rho_a rho_b) in the
+             !  pressure (gas + magnetic + artificial viscosity) and stress tensor terms
+             gradp  = gradpi*(rhoi*rho1j) + gradpj*(rho1i*rhoj)
              projsx = projsxi*(rhoi*rho1j) + projsxj*(rho1i*rhoj)
              projsy = projsyi*(rhoi*rho1j) + projsyj*(rho1i*rhoj)
              projsz = projszi*(rhoi*rho1j) + projszj*(rho1i*rhoj)
           else
+             gradp  = gradpi + gradpj
              projsx = projsxi + projsxj
              projsy = projsyi + projsyj
              projsz = projszi + projszj
@@ -1747,11 +1750,20 @@ subroutine compute_forces(i,iamgasi,iamdusti,xpartveci,hi,hi1,hi21,hi41,gradhi,g
           endif
 
           !--calculate divv for use in du, h prediction, av switch etc.
-          fsum(idrhodti) = fsum(idrhodti) + projv*grkerni
+          if (gdsph) then
+             !--geometric density: div v = -sum m_b/rho_b v_ab.grad W_ab(h_a) (assumes equal gas masses)
+             fsum(idrhodti) = fsum(idrhodti) + projv*grkerni*(rhoi*rho1j)
+          else
+             fsum(idrhodti) = fsum(idrhodti) + projv*grkerni
+          endif
 
           if (maxvxyzu >= 4 .or. track_lum) then
              !--viscous heating
-             fsum(idudtdissi) = fsum(idudtdissi) + dudtdissi + dudtresist
+             if (gdsph) then
+                fsum(idudtdissi) = fsum(idudtdissi) + dudtdissi*(rhoi*rho1j) + dudtresist
+             else
+                fsum(idudtdissi) = fsum(idudtdissi) + dudtdissi + dudtresist
+             endif
              !--energy dissipation due to conductivity
              fsum(idendtdissi) = fsum(idendtdissi) + dendissterm
           endif

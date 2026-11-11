@@ -587,7 +587,7 @@ pure subroutine get_density_sums(i,xpartveci,hi,hi1,hi21,iamtypei,iamgasi,iamdus
  use kernel,   only:get_kernel,get_kernel_grav1
  use part,     only:iphase,iamgas,iamdust,iamtype,maxphase,ibasetype,igas,idust,rhoh
  use part,     only:massoftype,iradxi,aprmassoftype
- use dim,      only:gravity,maxp,nalpha,use_dust,do_radiation,use_apr,maxpsph,curlv
+ use dim,      only:gravity,maxp,nalpha,use_dust,do_radiation,use_apr,maxpsph,curlv,gdsph
  use options,  only:implicit_radiation
  integer,      intent(in)    :: i
  real,         intent(in)    :: xpartveci(:)
@@ -753,6 +753,12 @@ pure subroutine get_density_sums(i,xpartveci,hi,hi1,hi21,iamtypei,iamgasi,iamdus
                 dz = dxcache(7,n)
              endif
              rij1grkern = rij1*grkerni
+             if (gdsph .and. gas_gas) then
+                !--geometric density: xi=1 derivative operators, weight m_b/rho_b instead of m_b/rho_a
+                rhoi = rhoh(real(hi),  pmassi)
+                rhoj = rhoh(xyzh(4,j), pmassj)
+                rij1grkern = rij1grkern*rhoi/rhoj
+             endif
              runix = dx*rij1grkern*pmassj
              runiy = dy*rij1grkern*pmassj
              runiz = dz*rij1grkern*pmassj
