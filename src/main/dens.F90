@@ -587,7 +587,7 @@ pure subroutine get_density_sums(i,xpartveci,hi,hi1,hi21,iamtypei,iamgasi,iamdus
  use kernel,   only:get_kernel,get_kernel_grav1
  use part,     only:iphase,iamgas,iamdust,iamtype,maxphase,ibasetype,igas,idust,rhoh
  use part,     only:massoftype,iradxi,aprmassoftype
- use dim,      only:gravity,maxp,nalpha,use_dust,do_radiation,use_apr,maxpsph,curlv
+ use dim,      only:gravity,maxp,nalpha,use_dust,do_radiation,use_apr,maxpsph,curlv,gdsph
  use options,  only:implicit_radiation
  integer,      intent(in)    :: i
  real,         intent(in)    :: xpartveci(:)
@@ -814,6 +814,12 @@ pure subroutine get_density_sums(i,xpartveci,hi,hi1,hi21,iamtypei,iamgasi,iamdus
                 dBx = xpartveci(iBevolxi)*rhoi - Bevol(1,j)*rhoj
                 dBy = xpartveci(iBevolyi)*rhoi - Bevol(2,j)*rhoj
                 dBz = xpartveci(iBevolzi)*rhoi - Bevol(3,j)*rhoj
+                if (gdsph) then
+                   !--geometric density: div B and curl B with weight m_b/rho_b
+                   dBx = dBx*rhoi/rhoj
+                   dBy = dBy*rhoi/rhoj
+                   dBz = dBz*rhoi/rhoj
+                endif
                 projdB = dBx*runix + dBy*runiy + dBz*runiz
 
                 ! difference operator of divB
