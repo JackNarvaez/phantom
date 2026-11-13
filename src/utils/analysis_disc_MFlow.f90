@@ -1,6 +1,6 @@
 !--------------------------------------------------------------------------!
 ! The Phantom Smoothed Particle Hydrodynamics code, by Daniel Price et al. !
-! Copyright (c) 2007-2025 The Authors (see AUTHORS)                        !
+! Copyright (c) 2007-2026 The Authors (see AUTHORS)                        !
 ! See LICENCE file for usage and distribution conditions                   !
 ! http://phantomsph.github.io/                                             !
 !--------------------------------------------------------------------------!
@@ -14,7 +14,7 @@ module analysis
 !
 ! :Runtime parameters: None
 !
-! :Dependencies: discanalysisutils, io, part, physcon, sortutils
+! :Dependencies: discanalysisutils, io, physcon, sortutils
 !
  use discanalysisutils, only:read_discparams,createbins
  implicit none
@@ -31,7 +31,6 @@ contains
 subroutine do_analysis(dumpfile,numfile,xyzh,vxyz,pmass,npart,time,iunit)
  use io,      only:fatal
  use physcon, only:pi
- use part,    only:rhoh
  use sortutils, only:indexx
 
  character(len=*), intent(in) :: dumpfile
@@ -50,8 +49,8 @@ subroutine do_analysis(dumpfile,numfile,xyzh,vxyz,pmass,npart,time,iunit)
  real :: unitlx(nr),unitly(nr),unitlz(nr),sigmavrsini(nr),sigmavphi(nr),sigmavrcosi(nr)
 
  real :: flow(nr),Hperc(nr),mass(nr),matradi(nr),buf
- real,   allocatable ::z(:,:)
- integer,  allocatable ::indexz(:,:)
+ real,   allocatable :: z(:,:)
+ integer,  allocatable :: indexz(:,:)
  integer :: j(nr),ninbin(nr),gausslimit(nr)
  integer :: k,l
 
@@ -301,9 +300,9 @@ end subroutine do_analysis
 
 subroutine flow_analysis(xyzh,vxyz,pmass,flow,npart,rad,nr,dr)
 
- real, intent(inout) :: flow(:)
- real, intent(in)    :: xyzh(:,:),vxyz(:,:),rad(:),dr,pmass
- integer, intent(in) :: npart,nr
+ real,    intent(inout) :: flow(:)
+ real,    intent(in)    :: xyzh(:,:),vxyz(:,:),rad(:),dr,pmass
+ integer, intent(in)    :: npart,nr
  real                :: rcili,vri
  integer             :: i,ii
 

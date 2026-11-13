@@ -1,6 +1,6 @@
 !--------------------------------------------------------------------------!
 ! The Phantom Smoothed Particle Hydrodynamics code, by Daniel Price et al. !
-! Copyright (c) 2007-2025 The Authors (see AUTHORS)                        !
+! Copyright (c) 2007-2026 The Authors (see AUTHORS)                        !
 ! See LICENCE file for usage and distribution conditions                   !
 ! http://phantomsph.github.io/                                             !
 !--------------------------------------------------------------------------!
@@ -16,6 +16,7 @@ module moddump
 !
 ! :Dependencies: dim, io, part
 !
+ use, intrinsic :: ieee_arithmetic, only:ieee_is_nan
  implicit none
  character(len=*), parameter, public :: moddump_flags = ''
 
@@ -33,7 +34,7 @@ subroutine modify_dump(npart,npartoftype,massoftype,xyzh,vxyzu)
 
  if (.not. do_radiation) call fatal("moddump_rad_to_LTE","Not compiled with radiation")
  do i=1,npart
-    if (isnan(rad(iradxi,i))) call fatal("moddump_rad_to_LTE","rad array contains NaNs")
+    if (ieee_is_nan(rad(iradxi,i))) call fatal("moddump_rad_to_LTE","rad array contains NaNs")
     vxyzu(4,i) = vxyzu(4,i) + rad(iradxi,i)
  enddo
 
